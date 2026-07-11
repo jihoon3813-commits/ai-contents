@@ -618,7 +618,7 @@ CREATE POLICY "Editors/Admins/Owners can manage content experiences"
 
 
 -- 1. 프롬프트 템플릿 테이블
-CREATE TABLE prompt_templates (
+CREATE TABLE IF NOT EXISTS prompt_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   key VARCHAR(100) NOT NULL,
   platform_id UUID REFERENCES platforms(id) ON DELETE CASCADE,
@@ -636,7 +636,7 @@ CREATE TABLE prompt_templates (
 );
 
 -- 2. 콘텐츠 브리프 테이블
-CREATE TABLE content_briefs (
+CREATE TABLE IF NOT EXISTS content_briefs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES content_projects(id) ON DELETE CASCADE UNIQUE NOT NULL,
   search_intent TEXT,
@@ -655,7 +655,7 @@ CREATE TABLE content_briefs (
 );
 
 -- 3. 콘텐츠 개요 테이블
-CREATE TABLE content_outlines (
+CREATE TABLE IF NOT EXISTS content_outlines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES content_projects(id) ON DELETE CASCADE NOT NULL,
   platform_id UUID REFERENCES platforms(id) ON DELETE SET NULL, -- NULL이면 공통 개요
@@ -672,7 +672,7 @@ CREATE TABLE content_outlines (
 );
 
 -- 4. 개요 항목 테이블
-CREATE TABLE outline_items (
+CREATE TABLE IF NOT EXISTS outline_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   outline_id UUID REFERENCES content_outlines(id) ON DELETE CASCADE NOT NULL,
   parent_id UUID REFERENCES outline_items(id) ON DELETE CASCADE,
@@ -687,7 +687,7 @@ CREATE TABLE outline_items (
 );
 
 -- 5. 플랫폼별 원고 본문 테이블
-CREATE TABLE platform_contents (
+CREATE TABLE IF NOT EXISTS platform_contents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE NOT NULL,
   project_id UUID REFERENCES content_projects(id) ON DELETE CASCADE NOT NULL,
@@ -720,7 +720,7 @@ CREATE TABLE platform_contents (
 );
 
 -- 6. 본문 개별 섹션 테이블
-CREATE TABLE content_sections (
+CREATE TABLE IF NOT EXISTS content_sections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   platform_content_id UUID REFERENCES platform_contents(id) ON DELETE CASCADE NOT NULL,
   outline_item_id UUID REFERENCES outline_items(id) ON DELETE SET NULL,
@@ -738,7 +738,7 @@ CREATE TABLE content_sections (
 );
 
 -- 7. 이미지 기획 테이블
-CREATE TABLE image_plans (
+CREATE TABLE IF NOT EXISTS image_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES content_projects(id) ON DELETE CASCADE NOT NULL,
   platform_content_id UUID REFERENCES platform_contents(id) ON DELETE CASCADE NOT NULL,
@@ -762,7 +762,7 @@ CREATE TABLE image_plans (
 );
 
 -- 8. AI 비동기 상태 추적 Jobs 테이블
-CREATE TABLE ai_jobs (
+CREATE TABLE IF NOT EXISTS ai_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE NOT NULL,
   project_id UUID REFERENCES content_projects(id) ON DELETE CASCADE NOT NULL,
