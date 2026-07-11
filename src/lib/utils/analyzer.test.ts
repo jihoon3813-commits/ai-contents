@@ -9,7 +9,7 @@ describe("analyzeText (Mock 문체 분석기)", () => {
   });
 
   it("존댓말 문체 분석이 올바르게 100%에 가깝게 나와야 함", () => {
-    const text = "안녕하세요. 안티그래비티 팀입니다. 우리는 혁신적인 마케팅 솔루션을 제공합니다. 지금 무료로 체험해 보세요!";
+    const text = "안녕하세요. AI 콘텐츠 봇 팀입니다. 우리는 혁신적인 마케팅 솔루션을 제공합니다. 지금 무료로 체험해 보세요!";
     const result = analyzeText(text);
 
     expect(result.char_count).toBeGreaterThan(50);

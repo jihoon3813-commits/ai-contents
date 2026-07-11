@@ -5,11 +5,11 @@ describe("Brand Zod Schemas", () => {
   describe("brandSchema (브랜드 기본정보)", () => {
     it("올바른 브랜드 입력값은 성공해야 함", () => {
       const valid = {
-        name: "안티그래비티",
+        name: "AI 콘텐츠 봇",
         industry: "IT / 마케팅",
         description: "AI 카피라이터 SaaS",
         tagline: "글쓰기 혁신",
-        website_url: "https://antigravity.ai",
+        website_url: "https://aicontentsbot.ai",
         target_audience: "",
         customer_problems: "",
         products_services: "",
@@ -43,7 +43,7 @@ describe("Brand Zod Schemas", () => {
 
     it("올바르지 않은 홈페이지 URL 형식은 에러가 나야 함", () => {
       const invalid = {
-        name: "안티그래비티",
+        name: "AI 콘텐츠 봇",
         industry: "IT",
         description: "",
         tagline: "",
@@ -114,7 +114,7 @@ describe("Brand Zod Schemas", () => {
       const valid = {
         title: "작성 샘플 1",
         source_type: "PASTED",
-        raw_text: "안티그래비티는 사용자의 브랜드 보이스를 자동으로 분석하여 문맥에 맞는 최적화된 마케팅 글을 빠르고 쉽게 작성해 주는 멀티플랫폼 AI 카피라이팅 서비스입니다. 블로그, 인스타그램 등 최적화 글을 생성해 드립니다.",
+        raw_text: "AI 콘텐츠 봇은 사용자의 브랜드 보이스를 자동으로 분석하여 문맥에 맞는 최적화된 마케팅 글을 빠르고 쉽게 작성해 주는 멀티플랫폼 AI 카피라이팅 서비스입니다. 블로그, 인스타그램 등 최적화 글을 생성해 드립니다.",
       };
       const result = brandSampleSchema.safeParse(valid);
       expect(result.success).toBe(true);

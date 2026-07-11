@@ -7,7 +7,7 @@ describe("generateSlug", () => {
   });
 
   it("한글 워크스페이스 이름을 정상적으로 유지해야 함", () => {
-    expect(generateSlug("안티그래비티 SaaS")).toBe("안티그래비티-saas");
+    expect(generateSlug("AI 콘텐츠 봇 SaaS")).toBe("ai-콘텐츠-봇-saas");
   });
 
   it("특수문자는 제거하거나 하이픈으로 치환되어야 함", () => {

@@ -6,7 +6,7 @@ describe("AI Provider Unit Tests (MockProvider)", () => {
 
   it("should generate a brief that complies with briefOutputSchema", async () => {
     const inputs = {
-      topic: "안티그래비티 SaaS",
+      topic: "AI 콘텐츠 봇 SaaS",
       keywords: "AI 마케터, 글쓰기",
       brand_info: "마케팅 솔루션",
       experience_info: "",

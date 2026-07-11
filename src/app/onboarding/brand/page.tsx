@@ -210,7 +210,7 @@ export default function OnboardingBrandPage() {
                     <input
                       id="name"
                       type="text"
-                      placeholder="예: 안티그래비티"
+                      placeholder="예: AI콘텐츠봇"
                       disabled={isLoading}
                       {...register("name")}
                       className={`mt-1 appearance-none block w-full px-3 py-2 border rounded-lg shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all sm:text-sm dark:bg-zinc-950 ${

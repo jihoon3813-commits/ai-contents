@@ -95,10 +95,10 @@ export default function DashboardLayoutClient({
           {/* 로고 영역 */}
           <div className="flex items-center h-16 px-6 border-b border-zinc-200/50 dark:border-zinc-800/50">
             <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black text-lg shadow-md shadow-primary/20 mr-3">
-              AG
+              AI
             </div>
             <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-400 bg-clip-text text-transparent">
-              안티그래비티
+              AI 컨텐츠 봇
             </span>
           </div>
 
@@ -192,7 +192,7 @@ export default function DashboardLayoutClient({
 
           {/* 경로Breadcrumbs 역할 */}
           <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">안티그래비티</span>
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">AI 컨텐츠 봇</span>
             <ChevronRight className="h-3.5 w-3.5" />
             <span>
               {pathname === "/dashboard"
@@ -248,10 +248,10 @@ export default function DashboardLayoutClient({
             {/* 모바일 로고 영역 */}
             <div className="flex items-center h-16 px-6 border-b border-zinc-200 dark:border-zinc-800">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black text-base shadow-md mr-3">
-                AG
+                AI
               </div>
               <span className="font-bold text-base bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-400 bg-clip-text text-transparent">
-                안티그래비티
+                AI 컨텐츠 봇
               </span>
             </div>
 

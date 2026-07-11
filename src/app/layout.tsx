@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "안티그래비티 | 멀티플랫폼 AI 콘텐츠 제작 SaaS",
+  title: "AI 컨텐츠 봇 | 멀티플랫폼 AI 콘텐츠 제작 SaaS",
   description: "브랜드 보이스와 핵심 사실 관계를 기반으로 플랫폼별 고품질 콘텐츠를 맞춤 생성합니다.",
 };
 

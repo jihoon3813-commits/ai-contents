@@ -372,7 +372,7 @@ export default function VoiceProfileForm({
                 <input
                   id="proprietary_terms"
                   type="text"
-                  placeholder="예: 안티그래비티, AI콘텐츠봇"
+                  placeholder="예: AI콘텐츠봇, 콘텐츠비서"
                   disabled={isLoading}
                   {...register("proprietary_terms")}
                   className="mt-1 appearance-none block w-full px-2.5 py-1.5 border border-zinc-300 dark:border-zinc-800 rounded-lg shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent text-xs dark:bg-zinc-950"
@@ -389,7 +389,7 @@ export default function VoiceProfileForm({
                 <input
                   id="intro_style"
                   type="text"
-                  placeholder="예: 안녕하세요, 안티그래비티입니다!"
+                  placeholder="예: 안녕하세요, AI콘텐츠봇입니다!"
                   disabled={isLoading}
                   {...register("intro_style")}
                   className="mt-1 appearance-none block w-full px-2.5 py-1.5 border border-zinc-300 dark:border-zinc-800 rounded-lg shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent text-xs dark:bg-zinc-950"

@@ -5,7 +5,7 @@ import { getAdminDashboardData } from "@/lib/actions/admin";
 import AdminClient from "./AdminClient";
 
 export const metadata = {
-  title: "안티그래비티 | 관리자 콘솔",
+  title: "AI 컨텐츠 봇 | 관리자 콘솔",
   description: "시스템 관리자 대시보드",
 };
 

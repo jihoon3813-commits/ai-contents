@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import ContentsListClient from "./ContentsListClient";
 
 export const metadata = {
-  title: "콘텐츠 프로젝트 관리 - 안티그래비티",
-  description: "안티그래비티 멀티플랫폼 콘텐츠 생성 프로젝트 관리 대시보드",
+  title: "콘텐츠 프로젝트 관리 - AI 컨텐츠 봇",
+  description: "AI 컨텐츠 봇 멀티플랫폼 콘텐츠 생성 프로젝트 관리 대시보드",
 };
 
 export default async function ContentsPage() {

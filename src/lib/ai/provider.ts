@@ -140,16 +140,16 @@ export class MockProvider implements AIProviderInterface {
       targetAudience: "30대 직장인 마케터",
       audienceProblem: "소셜 채널 발행 원고 작성 리소스 및 시간 부족",
       searchIntent: "마케팅 자동화 도구를 찾고 효율적으로 기획하는 방법 탐색",
-      contentGoal: "안티그래비티 SaaS 유도",
-      coreAnswer: "안티그래비티 AI 콘텐츠 비서로 원고 제작 시간을 90% 아끼는 솔루션 제안",
+      contentGoal: "AI 컨텐츠 봇 SaaS 유도",
+      coreAnswer: "AI 컨텐츠 봇 콘텐츠 비서로 원고 제작 시간을 90% 아끼는 솔루션 제안",
       coreMessage: "글쓰기 중력을 벗어나는 극도의 시간 효율성 확보",
       supportingPoints: [
         "1. 플랫폼별 100% 맞춤 독립 생성 알고리즘",
         "2. 리얼 내돈내산 경험담 이식으로 E-E-A-T 확보",
         "3. 6단계 위자드 마법사로 안전하고 신뢰할 수 있는 제획"
       ],
-      proposedCta: "지금 안티그래비티 가입하고 첫 무료 콘텐츠 5개 생성해 보세요!",
-      facts: inputs.experience_info ? [inputs.experience_info] : ["안티그래비티 마케팅 툴은 Next.js 기반 반응형 웹 앱이다."],
+      proposedCta: "지금 AI 컨텐츠 봇 가입하고 첫 무료 콘텐츠 5개 생성해 보세요!",
+      facts: inputs.experience_info ? [inputs.experience_info] : ["AI 컨텐츠 봇 마케팅 툴은 Next.js 기반 반응형 웹 앱이다."],
       restrictions: ["경험 사실이 누락된 경우 거짓 사용 후기 서술 금지"],
       tone: "차분하면서 신뢰를 주는 공식적인 대화형 말투",
     };
@@ -167,12 +167,12 @@ export class MockProvider implements AIProviderInterface {
       sections: [
         { title: "도입부", description: "지속 가능한 채널 발행의 애로사항 지적", item_type: "INTRO", heading_level: 2 },
         { title: "1. 플랫폼별로 본문을 완전히 새로 써야 하는 이유", description: "단순 복사 붙여넣기의 검색엔진 패널티 지적", item_type: "HEADING", heading_level: 2 },
-        { title: "2. 안티그래비티 AI 자동화 솔루션 소개", description: "6단계 기획 마법사와 보이스 어조 믹서 작동법", item_type: "HEADING", heading_level: 2 },
+        { title: "2. AI 컨텐츠 봇 AI 자동화 솔루션 소개", description: "6단계 기획 마법사와 보이스 어조 믹서 작동법", item_type: "HEADING", heading_level: 2 },
         { title: "자주 묻는 질문 (FAQ)", description: "요금제 한도 및 API 호출 보안 관련 질문", item_type: "FAQ", heading_level: 2 },
         { title: "결론", description: "중력을 벗어난 창작 라이프 지향 권고", item_type: "CONCLUSION", heading_level: 2 }
       ],
       conclusion_direction: "무료 체험을 통해 생산성 혁신을 직접 체감할 것을 독려",
-      cta_direction: "안티그래비티 무료 가입 링크 및 혜택 배지 표출"
+      cta_direction: "AI 컨텐츠 봇 무료 가입 링크 및 혜택 배지 표출"
     };
   }
 
@@ -233,10 +233,10 @@ export class MockProvider implements AIProviderInterface {
   async generatePlatformMetadata(promptTemplate: any, platformCode: string, bodyText: string): Promise<MetadataOutput> {
     return {
       seoTitle: `[SEO 최적화] 마케팅 원고 효율적으로 쓰는 방법 (채널: ${platformCode})`,
-      metaDescription: "안티그래비티 SaaS 콘텐츠 기획 마법사를 사용하여 3개 채널 맞춤 본문 원고를 실시간으로 빠르게 제작하는 지침서입니다.",
+      metaDescription: "AI 컨텐츠 봇 SaaS 콘텐츠 기획 마법사를 사용하여 3개 채널 맞춤 본문 원고를 실시간으로 빠르게 제작하는 지침서입니다.",
       slug: `marketing-automation-brief-${platformCode.toLowerCase()}`,
       excerpt: "블로그 기획부터 발행까지, AI 자동 작가 어조 조율 믹서로 다채널 마케팅을 성공시키는 방법론을 소개합니다.",
-      hashtags: ["마케팅자동화", "콘텐츠제작", "안티그래비티"],
+      hashtags: ["마케팅자동화", "콘텐츠제작", "AI컨텐츠봇"],
       categories: ["IT / 테크"],
       tags: ["AI", "SaaS", "글쓰기"],
     };
@@ -311,7 +311,7 @@ export class MockProvider implements AIProviderInterface {
 
     const keyword_density: Record<string, number> = {
       "인공지능 글쓰기": 2.5,
-      "안티그래비티": 1.2
+      "AI컨텐츠봇": 1.2
     };
 
     const issues: any[] = [];
@@ -351,12 +351,12 @@ export class MockProvider implements AIProviderInterface {
 
     const facts = [
       {
-        fact_text: "안티그래비티 AI는 10분만에 3개 채널 맞춤 초안을 완벽히 추출합니다.",
+        fact_text: "AI 콘텐츠 봇은 10분만에 3개 채널 맞춤 초안을 완벽히 추출합니다.",
         fact_type: "NEEDS_VERIFICATION" as const,
         verification_status: "UNVERIFIED" as const
       },
       {
-        fact_text: "안티그래비티 마케팅 툴은 Next.js 기반 반응형 웹 앱이다.",
+        fact_text: "AI 콘텐츠 봇 마케팅 툴은 Next.js 기반 반응형 웹 앱이다.",
         fact_type: "GENERAL_KNOWLEDGE" as const,
         verification_status: "UNVERIFIED" as const
       }

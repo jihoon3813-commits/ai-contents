@@ -242,11 +242,11 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-black text-2xl shadow-lg shadow-primary/20">
-            AG
+            AI
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">
-          안티그래비티 시작하기
+          AI 컨텐츠 봇 시작하기
         </h2>
         <p className="mt-2 text-center text-sm text-zinc-600 dark:text-zinc-400">
           멀티플랫폼 AI 콘텐츠 제작 SaaS

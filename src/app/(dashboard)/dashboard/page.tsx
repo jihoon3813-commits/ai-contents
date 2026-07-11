@@ -83,7 +83,7 @@ export default async function DashboardPage() {
             안녕하세요, {userName}님!
           </h1>
           <p className="text-sm sm:text-base opacity-90 leading-relaxed">
-            안티그래비티 대시보드에 오신 것을 환영합니다. <br />
+            AI 컨텐츠 봇 대시보드에 오신 것을 환영합니다. <br />
             이곳에서 브랜드를 정의하고 플랫폼 최적화된 마케팅 글을 빠르고 쉽게 작성해 보세요.
           </p>
           <div className="pt-4 flex flex-wrap gap-3">
