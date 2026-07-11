@@ -173,27 +173,39 @@ CREATE POLICY "Owners can update workspace"
     )
   );
 
--- 10. Workspace Members Policies
+-- 10. Workspace Members Policies (보안 함수를 정의하여 무한 루프 방지)
+CREATE OR REPLACE FUNCTION public.get_auth_user_workspaces()
+RETURNS SETOF UUID AS $$
+BEGIN
+  RETURN QUERY
+  SELECT workspace_id 
+  FROM public.workspace_members 
+  WHERE user_id = auth.uid();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.get_auth_user_managed_workspaces()
+RETURNS SETOF UUID AS $$
+BEGIN
+  RETURN QUERY
+  SELECT workspace_id 
+  FROM public.workspace_members 
+  WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 DROP POLICY IF EXISTS "Members can view workspace members" ON public.workspace_members;
 CREATE POLICY "Members can view workspace members" 
   ON public.workspace_members FOR SELECT 
   USING (
-    workspace_id IN (
-      SELECT workspace_id 
-      FROM public.workspace_members 
-      WHERE user_id = auth.uid()
-    )
+    workspace_id IN (SELECT public.get_auth_user_workspaces())
   );
 
 DROP POLICY IF EXISTS "Owners/Admins can manage members" ON public.workspace_members;
 CREATE POLICY "Owners/Admins can manage members" 
   ON public.workspace_members FOR ALL 
   USING (
-    workspace_id IN (
-      SELECT workspace_id 
-      FROM public.workspace_members 
-      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
-    )
+    workspace_id IN (SELECT public.get_auth_user_managed_workspaces())
   );
 
 -- 11. Subscriptions Policies
