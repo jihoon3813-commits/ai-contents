@@ -64,7 +64,7 @@ export default function WorkspaceSettingsPage() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-
+ 
         if (user) {
           // 1. 유저의 첫 번째 워크스페이스 멤버십 정보 조회
           const { data: members, error: memberError } = await supabase
@@ -72,31 +72,38 @@ export default function WorkspaceSettingsPage() {
             .select("workspace_id, role, workspaces(id, name, slug)")
             .eq("user_id", user.id)
             .limit(1);
-
+ 
           if (memberError || !members || members.length === 0) {
             toast.error("소속된 워크스페이스를 조회할 수 없습니다.");
             setIsLoading(false);
             return;
           }
-
+ 
           const member = members[0];
-          const ws = member.workspaces as unknown as { id: string; name: string; slug: string };
+          const wsRaw = member.workspaces;
+          const ws = (Array.isArray(wsRaw) ? wsRaw[0] : wsRaw) as unknown as { id: string; name: string; slug: string };
           
+          if (!ws) {
+            toast.error("소속된 워크스페이스 상세 정보를 찾을 수 없습니다.");
+            setIsLoading(false);
+            return;
+          }
+
           setWorkspaceId(ws.id);
           setUserRole(member.role);
-
+ 
           reset({
             name: ws.name || "",
             slug: ws.slug || "",
           });
-
+ 
           // 2. 워크스페이스 구독 정보 조회
           const { data: subs } = await supabase
             .from("subscriptions")
             .select("plan_code, status, limits")
             .eq("workspace_id", ws.id)
             .maybeSingle();
-
+ 
           if (subs) {
             setSubscription(subs as unknown as SubscriptionInfo);
           }
@@ -107,9 +114,9 @@ export default function WorkspaceSettingsPage() {
         setIsLoading(false);
       }
     }
-
+ 
     loadWorkspaceData();
-  }, [supabase, reset, toast]);
+  }, [supabase, reset]);
 
   const onSubmit = async (data: WorkspaceFormData) => {
     if (!workspaceId || !isOwner) return;

@@ -68,7 +68,7 @@ export default function ProfileSettingsPage() {
     }
 
     loadProfile();
-  }, [supabase, reset, toast]);
+  }, [supabase, reset]);
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!userId) return;
