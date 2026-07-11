@@ -117,7 +117,7 @@ export default function OnboardingBrandPage() {
     <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="inline-flex h-12 w-12 rounded-xl bg-primary items-center justify-center text-primary-foreground font-black text-2xl shadow-lg shadow-primary/20">
-          AG
+          AI
         </div>
         <h2 className="mt-6 text-3xl font-extrabold text-zinc-900 dark:text-zinc-100">
           초기 온보딩 설정
