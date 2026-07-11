@@ -39,6 +39,12 @@ export default function OnboardingBrandPage() {
       description: "",
       tagline: "",
       website_url: "",
+      target_audience: "",
+      customer_problems: "",
+      products_services: "",
+      core_values: "",
+      default_cta: "",
+      legal_notice: "",
       is_default: true,
     },
   });
