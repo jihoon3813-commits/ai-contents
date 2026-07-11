@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request);
   const path = request.nextUrl.pathname;
 
@@ -33,11 +33,11 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse;
 }
 
-// 미들웨어가 실행될 경로 필터링 설정
+// 프록시가 실행될 경로 필터링 설정
 export const config = {
   matcher: [
     /*
-     * 아래 경로들을 제외한 모든 요청에서 미들웨어를 실행합니다:
+     * 아래 경로들을 제외한 모든 요청에서 프록시를 실행합니다:
      * - _next/static (정적 파일)
      * - _next/image (이미지 최적화 파일)
      * - favicon.ico (파비콘 파일)
