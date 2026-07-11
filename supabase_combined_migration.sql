@@ -796,32 +796,40 @@ ALTER TABLE image_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_jobs ENABLE ROW LEVEL SECURITY;
 
 -- 정책 생성 (본인이 속한 워크스페이스 기준 격리)
+DROP POLICY IF EXISTS select_prompt_templates ON prompt_templates;
 CREATE POLICY select_prompt_templates ON prompt_templates FOR SELECT USING (true); -- 템플릿은 전체 공유 읽기
 
+DROP POLICY IF EXISTS manage_content_briefs ON content_briefs;
 CREATE POLICY manage_content_briefs ON content_briefs
   USING (project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL))
   WITH CHECK (project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL));
 
+DROP POLICY IF EXISTS manage_content_outlines ON content_outlines;
 CREATE POLICY manage_content_outlines ON content_outlines
   USING (project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL))
   WITH CHECK (project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL));
 
+DROP POLICY IF EXISTS manage_outline_items ON outline_items;
 CREATE POLICY manage_outline_items ON outline_items
   USING (outline_id IN (SELECT id FROM content_outlines WHERE project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL)))
   WITH CHECK (outline_id IN (SELECT id FROM content_outlines WHERE project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL)));
 
+DROP POLICY IF EXISTS manage_platform_contents ON platform_contents;
 CREATE POLICY manage_platform_contents ON platform_contents
   USING (workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()))
   WITH CHECK (workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS manage_content_sections ON content_sections;
 CREATE POLICY manage_content_sections ON content_sections
   USING (platform_content_id IN (SELECT id FROM platform_contents WHERE workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid())))
   WITH CHECK (platform_content_id IN (SELECT id FROM platform_contents WHERE workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid())));
 
+DROP POLICY IF EXISTS manage_image_plans ON image_plans;
 CREATE POLICY manage_image_plans ON image_plans
   USING (project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL))
   WITH CHECK (project_id IN (SELECT id FROM content_projects WHERE deleted_at IS NULL));
 
+DROP POLICY IF EXISTS manage_ai_jobs ON ai_jobs;
 CREATE POLICY manage_ai_jobs ON ai_jobs
   USING (workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()))
   WITH CHECK (workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()));
