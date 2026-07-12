@@ -829,3 +829,70 @@ export async function saveSimplifiedProject(
     return { success: false, error: err.message || "기획 정보 저장 중 예외가 발생했습니다." };
   }
 }
+
+// 13. 워크스페이스 설정 데이터 조회용 서버 액션 (Convex Auth 유저 RLS 우회 지원)
+export async function getWorkspaceSettingsData() {
+  try {
+    const { userId, workspaceId, userRole } = await verifyWorkspaceMembership(["OWNER", "ADMIN", "EDITOR", "VIEWER"]);
+    const supabase = await createClient();
+
+    // 1. 워크스페이스 정보 조회
+    const { data: ws, error: wsErr } = await supabase
+      .from("workspaces")
+      .select("id, name, slug")
+      .eq("id", workspaceId)
+      .single();
+
+    if (wsErr || !ws) {
+      return { success: false, error: wsErr?.message || "워크스페이스를 찾을 수 없습니다." };
+    }
+
+    // 2. 구독 정보 조회
+    const { data: subs } = await supabase
+      .from("subscriptions")
+      .select("plan_code, status, limits")
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+
+    return {
+      success: true,
+      workspaceId: ws.id,
+      userRole,
+      workspace: {
+        name: ws.name || "",
+        slug: ws.slug || "",
+      },
+      subscription: subs || null,
+    };
+  } catch (err: any) {
+    console.error("getWorkspaceSettingsData error:", err);
+    return { success: false, error: err.message || "워크스페이스 정보를 로드할 수 없습니다." };
+  }
+}
+
+// 14. 워크스페이스 설정 정보 수정용 서버 액션
+export async function updateWorkspaceSettings(workspaceId: string, data: { name: string; slug: string }) {
+  try {
+    const { userRole } = await verifyWorkspaceMembership(["OWNER"]);
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from("workspaces")
+      .update({
+        name: data.name,
+        slug: data.slug,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", workspaceId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("updateWorkspaceSettings error:", err);
+    return { success: false, error: err.message || "워크스페이스 정보 저장 중 오류가 발생했습니다." };
+  }
+}
+

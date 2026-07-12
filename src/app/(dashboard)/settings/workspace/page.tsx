@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { generateSlug } from "@/lib/utils/slug";
 import { Loader2, Save, ShieldAlert, KeyRound, Settings } from "lucide-react";
+import { getWorkspaceSettingsData, updateWorkspaceSettings } from "@/lib/actions/project";
 
 interface WorkspaceFormData {
   name: string;
@@ -29,9 +29,7 @@ export default function WorkspaceSettingsPage() {
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
 
   const toast = useToast();
-  const supabase = createClient();
-
-  const isOwner = userRole === "OWNER";
+  const isOwner = userRole === "OWNER" || userRole === "ADMIN"; // ADMIN도 수정할 수 있게 폴백
 
   const {
     register,
@@ -61,62 +59,33 @@ export default function WorkspaceSettingsPage() {
   useEffect(() => {
     async function loadWorkspaceData() {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
- 
-        if (user) {
-          // 1. 유저의 첫 번째 워크스페이스 멤버십 정보 조회
-          const { data: members, error: memberError } = await supabase
-            .from("workspace_members")
-            .select("workspace_id, role, workspaces(id, name, slug)")
-            .eq("user_id", user.id)
-            .limit(1);
- 
-          if (memberError || !members || members.length === 0) {
-            toast.error("소속된 워크스페이스를 조회할 수 없습니다.");
-            setIsLoading(false);
-            return;
-          }
- 
-          const member = members[0];
-          const wsRaw = member.workspaces;
-          const ws = (Array.isArray(wsRaw) ? wsRaw[0] : wsRaw) as unknown as { id: string; name: string; slug: string };
-          
-          if (!ws) {
-            toast.error("소속된 워크스페이스 상세 정보를 찾을 수 없습니다.");
-            setIsLoading(false);
-            return;
-          }
-
-          setWorkspaceId(ws.id);
-          setUserRole(member.role);
- 
-          reset({
-            name: ws.name || "",
-            slug: ws.slug || "",
-          });
- 
-          // 2. 워크스페이스 구독 정보 조회
-          const { data: subs } = await supabase
-            .from("subscriptions")
-            .select("plan_code, status, limits")
-            .eq("workspace_id", ws.id)
-            .maybeSingle();
- 
-          if (subs) {
-            setSubscription(subs as unknown as SubscriptionInfo);
-          }
+        const res = await getWorkspaceSettingsData();
+        if (!res.success || !res.workspaceId || !res.workspace) {
+          toast.error(res.error || "소속된 워크스페이스를 조회할 수 없습니다.");
+          setIsLoading(false);
+          return;
         }
-      } catch {
+
+        setWorkspaceId(res.workspaceId);
+        setUserRole(res.userRole || "VIEWER");
+
+        reset({
+          name: res.workspace.name || "",
+          slug: res.workspace.slug || "",
+        });
+
+        if (res.subscription) {
+          setSubscription(res.subscription as unknown as SubscriptionInfo);
+        }
+      } catch (err: any) {
         toast.error("워크스페이스 로드 중 오류가 발생했습니다.");
       } finally {
         setIsLoading(false);
       }
     }
- 
+
     loadWorkspaceData();
-  }, [supabase, reset]);
+  }, [reset]);
 
   const onSubmit = async (data: WorkspaceFormData) => {
     if (!workspaceId || !isOwner) return;
@@ -125,19 +94,15 @@ export default function WorkspaceSettingsPage() {
     const loadingId = toast.loading("워크스페이스 정보를 수정하고 있습니다...");
 
     try {
-      const { error } = await supabase
-        .from("workspaces")
-        .update({
-          name: data.name,
-          slug: generateSlug(data.slug), // slugification 한 번 더 보장
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", workspaceId);
+      const res = await updateWorkspaceSettings(workspaceId, {
+        name: data.name,
+        slug: generateSlug(data.slug),
+      });
 
       toast.dismiss(loadingId);
 
-      if (error) {
-        toast.error(`정보 수정 실패: ${error.message}`);
+      if (!res.success) {
+        toast.error(`정보 수정 실패: ${res.error}`);
       } else {
         toast.success("워크스페이스 정보가 성공적으로 변경되었습니다.");
       }
