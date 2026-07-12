@@ -33,13 +33,32 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
           const adminSupabase = createAdminClient();
 
           // 1) Convex User Email을 조회하여 Supabase User UUID 획득 및 프로필 동기화
-          const email = await fetchQuery(api.profiles.getCurrentUserEmail, {}, { token });
-          if (!email) {
-            throw new Error("Convex 사용자 이메일을 찾을 수 없습니다.");
+          let email: string | null = null;
+          try {
+            const parts = token.split(".");
+            if (parts.length === 3) {
+              const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+              email = payload.email || payload.email_verified || null;
+            }
+          } catch (jwtErr) {
+            console.error("Failed to decode Convex JWT:", jwtErr);
           }
 
-          const { data: userData } = await adminSupabase.auth.admin.getUserByEmail(email);
-          let supabaseUserId = userData?.user?.id;
+          if (!email) {
+            try {
+              email = await fetchQuery(api.profiles.getCurrentUserEmail, {}, { token });
+            } catch (convexErr) {
+              console.error("Failed to fetch email from Convex query:", convexErr);
+            }
+          }
+
+          if (!email) {
+            throw new Error("사용자 이메일을 식별할 수 없습니다. Convex 함수가 동기화되지 않았거나 토큰이 유효하지 않습니다.");
+          }
+
+          const { data: listData } = await adminSupabase.auth.admin.listUsers();
+          const targetUser = (listData?.users || []).find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+          let supabaseUserId = targetUser?.id;
 
           if (!supabaseUserId) {
             // Supabase에 유저가 없을 경우 자동 생성
