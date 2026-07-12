@@ -437,8 +437,8 @@ export class GeminiProvider implements AIProviderInterface {
   private textModel: string;
   private fastModel: string;
 
-  constructor() {
-    this.apiKey = process.env.AI_API_KEY || "";
+  constructor(overrideApiKey?: string) {
+    this.apiKey = overrideApiKey || process.env.AI_API_KEY || "";
     this.textModel = process.env.AI_TEXT_MODEL || "gemini-1.5-pro";
     this.fastModel = process.env.AI_FAST_MODEL || "gemini-1.5-flash";
   }
@@ -661,13 +661,13 @@ ${bodyText}`;
 
 // --- 5. AI Provider 팩토리 헬퍼 선언 ---
 
-export function getAIProvider(): AIProviderInterface {
+export function getAIProvider(overrideApiKey?: string): AIProviderInterface {
   const provider = process.env.AI_PROVIDER || "";
-  const apiKey = process.env.AI_API_KEY || "";
+  const apiKey = overrideApiKey || process.env.AI_API_KEY || "";
   
   // AI_API_KEY 환경변수가 존재하고, 명시적으로 MOCK을 요구하지 않았다면 실서버(GEMINI)로 연동
   if (provider.toUpperCase() === "GEMINI" || (apiKey && provider.toUpperCase() !== "MOCK")) {
-    return new GeminiProvider();
+    return new GeminiProvider(apiKey);
   }
   // 기본 혹은 지정 없을 시 MockProvider 반환
   return new MockProvider();

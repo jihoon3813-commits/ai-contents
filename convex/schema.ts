@@ -344,4 +344,13 @@ export default defineSchema({
   })
     .index("by_resolved", ["resolved"])
     .index("by_user_id", ["user_id"]),
+
+  // 30. System Settings (시스템 전역 설정 - API 키 등)
+  system_settings: defineTable({
+    key: v.string(),
+    value: v.string(),
+    description: v.optional(v.string()),
+    updated_at: v.string(),
+  })
+    .index("by_key", ["key"]),
 });

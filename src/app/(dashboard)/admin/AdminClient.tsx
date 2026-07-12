@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/toast";
 import {
   toggleAdminStatus,
@@ -17,6 +17,7 @@ import {
   Shield,
   Loader2,
   RefreshCw,
+  Sliders,
 } from "lucide-react";
 
 interface Profile {
@@ -57,21 +58,60 @@ interface PromptTemplate {
   template_text: string;
 }
 
+interface SystemSetting {
+  _id: string;
+  key: string;
+  value: string;
+  description?: string;
+  updated_at: string;
+}
+
 interface AdminClientProps {
   initialData: {
     profiles: Profile[];
     workspaces: Workspace[];
     errorLogs: ErrorLog[];
     promptTemplates: PromptTemplate[];
+    systemSettings?: SystemSetting[];
   };
 }
 
 export default function AdminClient({ initialData }: AdminClientProps) {
   const [data, setData] = useState(initialData);
-  const [activeTab, setActiveTab] = useState<"users" | "workspaces" | "errors" | "prompts">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "workspaces" | "errors" | "prompts" | "settings">("users");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [geminiKey, setGeminiKey] = useState("");
+  const [isSavingSetting, setIsSavingSetting] = useState(false);
 
   const toast = useToast();
+
+  useEffect(() => {
+    const keyObj = (data.systemSettings || []).find((s: any) => s.key === "AI_API_KEY");
+    setGeminiKey(keyObj?.value || "");
+  }, [data.systemSettings]);
+
+  const handleSaveGeminiKey = async () => {
+    setIsSavingSetting(true);
+    const toastId = toast.loading("Gemini API Key 저장 중...");
+    try {
+      const { saveSystemSetting, getAdminDashboardData } = await import("@/lib/actions/admin");
+      const res = await saveSystemSetting("AI_API_KEY", geminiKey, "Google Gemini API 키 (어드민 연동용)");
+      toast.dismiss(toastId);
+      if (res && res.success) {
+        toast.success("Gemini API Key가 성공적으로 업데이트되었습니다.");
+        // 어드민 데이터 강제 새로고침
+        const fresh = await getAdminDashboardData();
+        setData(fresh as any);
+      } else {
+        toast.error(res?.error || "API Key 저장 중 오류가 발생했습니다.");
+      }
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(`오류 발생: ${err.message}`);
+    } finally {
+      setIsSavingSetting(false);
+    }
+  };
 
   // 대시보드 강제 리로드 액션
   const handleReload = async () => {
@@ -248,6 +288,17 @@ export default function AdminClient({ initialData }: AdminClientProps) {
           <Terminal className="h-4 w-4" />
           프롬프트 템플릿
         </button>
+        <button
+          onClick={() => setActiveTab("settings")}
+          className={`pb-3 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+            activeTab === "settings"
+              ? "border-b-2 border-primary text-primary"
+              : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+          }`}
+        >
+          <Sliders className="h-4 w-4" />
+          API 연동 설정
+        </button>
       </div>
 
       {/* 탭 상세 콘텐츠 */}
@@ -421,6 +472,47 @@ export default function AdminClient({ initialData }: AdminClientProps) {
                   </pre>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 5. API 연동 설정 */}
+        {activeTab === "settings" && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">외부 API 연동 및 시스템 키 관리</h3>
+              <p className="text-[11px] text-zinc-400 mt-1 font-medium">
+                AI 콘텐츠 자동 생성에 사용되는 외부 서비스 연동 정보를 원격 설정합니다.
+              </p>
+            </div>
+
+            <div className="border-t border-zinc-150 dark:border-zinc-800 pt-5 space-y-4 max-w-xl">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-zinc-400 uppercase tracking-wider">
+                  Google Gemini API Key
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={geminiKey}
+                    onChange={(e) => setGeminiKey(e.target.value)}
+                    placeholder="AI_API_KEY 입력 (예: AIzaSy...)"
+                    className="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary font-mono font-medium"
+                  />
+                  <button
+                    onClick={handleSaveGeminiKey}
+                    disabled={isSavingSetting}
+                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 dark:bg-purple-700 dark:hover:bg-purple-600 text-white disabled:bg-zinc-300 dark:disabled:bg-zinc-850 disabled:text-zinc-500 rounded-xl text-xs font-bold cursor-pointer transition flex items-center gap-1 shrink-0"
+                  >
+                    {isSavingSetting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    설정 저장
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-normal font-medium">
+                  • 여기에 API 키를 저장하면 서버의 `.env.local` 환경변수 키 대신 **이 저장소 설정 키를 우선 사용**하여 기동됩니다.<br />
+                  • 키를 비운 채로 저장하면 기존 로컬 개발 환경변수로 롤백됩니다.
+                </p>
+              </div>
             </div>
           </div>
         )}

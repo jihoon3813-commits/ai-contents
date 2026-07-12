@@ -48,6 +48,25 @@ function extractCleanTextFromHtml(html: string): string {
   return text.slice(0, 5000);
 }
 
+// 헬퍼: DB 설정 연동 AI Provider 획득
+async function getAIProviderWithDbKey() {
+  const { fetchQuery } = await import("convex/nextjs");
+  const { api } = await import("../../../convex/_generated/api");
+  const { convexAuthNextjsToken } = await import("@convex-dev/auth/nextjs/server");
+  
+  let dbApiKey = "";
+  try {
+    const token = await convexAuthNextjsToken();
+    if (token) {
+      dbApiKey = await fetchQuery(api.admin.getSystemSetting, { key: "AI_API_KEY" }, { token }) || "";
+    }
+  } catch (err) {
+    console.error("Failed to fetch AI_API_KEY from Convex system_settings:", err);
+  }
+  
+  return getAIProvider(dbApiKey);
+}
+
 // 헬퍼: 워크스페이스 권한 검증
 export async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "ADMIN", "EDITOR"]) {
   // 1. Convex Auth 인증 상태 우선 확인
@@ -349,7 +368,7 @@ export async function generateBrief(projectId: string) {
     experience_info: experienceInfo,
   };
 
-  const aiProvider = getAIProvider();
+  const aiProvider = await getAIProviderWithDbKey();
 
   // AI 엔진 기동 (브리프 JSON 구조 반환됨)
   const aiBrief = await aiProvider.generateBrief(template, aiInputs);
@@ -438,7 +457,7 @@ export async function generateCommonOutline(projectId: string) {
   }
 
   const template = await getPromptTemplate("OUTLINE_GENERATION");
-  const aiProvider = getAIProvider();
+  const aiProvider = await getAIProviderWithDbKey();
 
   // AI 공통 개요 생성
   const aiOutline = await aiProvider.generateCommonOutline(template, brief.data as any);
@@ -628,7 +647,7 @@ export async function generatePlatformContents(projectId: string) {
   for (const pp of projectPlats) {
     // 5-1. 플랫폼별 맞춤 개요 분기 생성 (AI Provider 활용)
     const platTemplate = await getPromptTemplate("PLATFORM_OUTLINE_GENERATION");
-    const aiProvider = getAIProvider();
+    const aiProvider = await getAIProviderWithDbKey();
     
     const plainOutlineInput = {
       title_candidates: commonOutline.title_candidates || [],
@@ -769,7 +788,7 @@ async function runBackgroundGeneration(
   console.log(">>> [BG WORKER] runBackgroundGeneration started:", { jobId, projectId, workspaceId, userId, contentsListLength: contentsList.length });
   try {
     const supabase = createAdminClient();
-    const aiProvider = getAIProvider();
+    const aiProvider = await getAIProviderWithDbKey();
 
     // 프로젝트 기획, 보이스, 경험 데이터 사전 획득 (파라미터 전달받았으므로 DB 재호출 생략)
     const isMock = (process.env.AI_PROVIDER || "MOCK").toUpperCase() === "MOCK";
@@ -1120,7 +1139,7 @@ export async function retrySection(sectionId: string) {
   const experience = await getProjectExperience(projectId);
   
   const template = await getPromptTemplate("SECTION_GENERATION");
-  const aiProvider = getAIProvider();
+  const aiProvider = await getAIProviderWithDbKey();
 
   try {
     const secResult = await aiProvider.generateSection(template, {

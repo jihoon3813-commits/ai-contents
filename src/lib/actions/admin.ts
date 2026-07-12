@@ -63,3 +63,19 @@ export async function resolveErrorLog(logId: string) {
     return { success: false, error: err.message || "장애 상태 처리 중 예외가 발생했습니다." };
   }
 }
+
+export async function saveSystemSetting(key: string, value: string, description?: string) {
+  try {
+    const token = await convexAuthNextjsToken();
+    if (!token) return { success: false, error: "인증되지 않은 사용자입니다." };
+    await fetchMutation(
+      api.admin.saveSystemSetting,
+      { key, value, description },
+      { token }
+    );
+    return { success: true };
+  } catch (err: any) {
+    console.error("saveSystemSetting error:", err);
+    return { success: false, error: err.message || "시스템 설정 저장 중 예외가 발생했습니다." };
+  }
+}
