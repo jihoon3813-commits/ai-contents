@@ -1,6 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+const dummyProxy: any = new Proxy(() => {}, {
+  get(target, prop) {
+    if (prop === "then") {
+      return (resolve: any) => resolve({ data: { user: null }, error: null });
+    }
+    return dummyProxy;
+  },
+  apply(target, thisArg, argumentsList) {
+    return dummyProxy;
+  }
+});
+
 /**
  * 서버 환경(Server Component, Server Action, Route Handler)에서 사용할 Supabase 클라이언트를 반환합니다.
  */
@@ -8,7 +20,7 @@ export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
-    return {} as any;
+    return dummyProxy;
   }
 
   const cookieStore = await cookies();
@@ -58,7 +70,7 @@ export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) {
-    return {} as any;
+    return dummyProxy;
   }
 
   return createServerClient(

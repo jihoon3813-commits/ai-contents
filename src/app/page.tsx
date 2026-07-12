@@ -1,13 +1,10 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const token = await convexAuthNextjsToken();
 
-  if (user) {
+  if (token) {
     redirect("/dashboard");
   } else {
     redirect("/login");
