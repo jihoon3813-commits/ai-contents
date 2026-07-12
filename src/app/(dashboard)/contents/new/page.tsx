@@ -1,7 +1,8 @@
 import React from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { createProject } from "@/lib/actions/project";
+import { verifyWorkspaceMembership } from "@/lib/actions/generation";
 import { Loader2, Sparkles } from "lucide-react";
 
 export default async function NewProjectPage() {
@@ -17,13 +18,42 @@ export default async function NewProjectPage() {
     throw new Error(`브랜드 확인 중 오류 발생: ${error.message}`);
   }
 
-  // 브랜드가 전혀 없는 경우 온보딩 유도
-  if (!brands || brands.length === 0) {
-    redirect("/onboarding/brand");
+  let activeBrands = brands;
+
+  // 브랜드가 전혀 없는 경우 백그라운드 자동 생성
+  if (!activeBrands || activeBrands.length === 0) {
+    const { workspaceId } = await verifyWorkspaceMembership();
+    const adminSupabase = createAdminClient();
+    const { data: newBrand, error: brandErr } = await adminSupabase
+      .from("brands")
+      .insert({
+        workspace_id: workspaceId,
+        name: "기본 브랜드",
+        industry: "마케팅",
+        description: "기본 마케팅 브랜드 프로필",
+        is_default: true,
+      })
+      .select("id, is_default")
+      .single();
+
+    if (brandErr || !newBrand) {
+      throw new Error(`기본 브랜드 생성 실패: ${brandErr?.message || "알 수 없는 오류"}`);
+    }
+
+    // voice_profiles도 함께 생성
+    await adminSupabase.from("voice_profiles").insert({
+      brand_id: newBrand.id,
+      style_description: "일반적이고 친근한 톤",
+      tones: [],
+      rules: [],
+      prohibited_words: [],
+    });
+
+    activeBrands = [newBrand];
   }
 
-  // 2. 기본 브랜드 선택 (없다면 첫 번째 브랜드 활용)
-  const defaultBrand = brands.find((b: any) => b.is_default === true) || brands[0];
+  // 2. 기본 브랜드 선택
+  const defaultBrand = activeBrands.find((b: any) => b.is_default === true) || activeBrands[0];
 
   // 3. 신규 빈 프로젝트 세션 발급
   let newProject;

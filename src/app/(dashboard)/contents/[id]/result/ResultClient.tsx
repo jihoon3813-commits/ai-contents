@@ -37,12 +37,63 @@ export default function ResultClient({ project, contents, initialImagePlans }: R
   const [retryingSectionId, setRetryingSectionId] = useState<string | null>(null);
   const [isRetrying, startRetrying] = useTransition();
 
-  // 클립보드 복사 헬퍼
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedText(text);
-    toast.success(`${label}이 클립보드에 복사되었습니다.`);
-    setTimeout(() => setCopiedText(null), 2000);
+  // 클립보드 복사 헬퍼 (리치 텍스트 서식 포함)
+  const handleCopy = (text: string, label: string, stylePreset?: "NAVER" | "TISTORY" | "HTML" | "PLAIN") => {
+    if (!stylePreset || stylePreset === "PLAIN") {
+      navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      toast.success(`${label}이 일반 텍스트로 복사되었습니다.`);
+      setTimeout(() => setCopiedText(null), 2000);
+    } else if (stylePreset === "HTML") {
+      const htmlContent = activeContent?.sections
+        ?.map((sec: any) => sec.body_html || `<p>${sec.body_text}</p>`)
+        .join("\n\n") || "";
+      navigator.clipboard.writeText(htmlContent);
+      setCopiedText(htmlContent);
+      toast.success("원고의 raw HTML 코드가 클립보드에 복사되었습니다. 에디터의 HTML 입력기에 붙여넣으세요.");
+      setTimeout(() => setCopiedText(null), 2000);
+    } else {
+      const sectionsHtml = activeContent?.sections
+        ?.map((sec: any) => sec.body_html || `<p>${sec.body_text}</p>`)
+        .join("\n\n") || "";
+
+      let styledHtml = "";
+      if (stylePreset === "NAVER") {
+        // 네이버 스마트에디터 최적화 (나눔고딕 계열 폰트 및 15px 크기, 1.8 줄간격)
+        styledHtml = `
+          <div style="font-family: 'Nanum Gothic', '나눔고딕', sans-serif; font-size: 15px; line-height: 1.8; color: #333333; letter-spacing: -0.5px;">
+            ${sectionsHtml}
+          </div>
+        `;
+      } else if (stylePreset === "TISTORY") {
+        // 티스토리 에디터 최적화 (본고딕 계열 폰트 및 16px 크기, 2.0 줄간격)
+        styledHtml = `
+          <div style="font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 16px; line-height: 2.0; color: #222222; letter-spacing: -0.3px;">
+            ${sectionsHtml}
+          </div>
+        `;
+      }
+
+      const blobHtml = new Blob([styledHtml], { type: "text/html" });
+      const blobText = new Blob([text], { type: "text/plain" });
+
+      try {
+        navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": blobHtml,
+            "text/plain": blobText,
+          })
+        ]);
+        setCopiedText(styledHtml);
+        toast.success(`${label}이 ${stylePreset === "NAVER" ? "네이버 블로그" : "티스토리"} 맞춤 스타일 서식을 포함하여 클립보드에 복사되었습니다.`);
+        setTimeout(() => setCopiedText(null), 2000);
+      } catch (err) {
+        navigator.clipboard.writeText(text);
+        setCopiedText(text);
+        toast.success(`일반 텍스트 형식으로 클립보드에 복사되었습니다.`);
+        setTimeout(() => setCopiedText(null), 2000);
+      }
+    }
   };
 
   // 개별 실패 섹션 재시도 트리거
@@ -155,14 +206,33 @@ export default function ResultClient({ project, contents, initialImagePlans }: R
                     <FileText className="h-3.5 w-3.5" />
                     상세 본문 직접 편집하기
                   </Link>
-                  <button
-                    onClick={() => handleCopy(activeContent.body_text || "", "원고 전체 본문")}
-                    className="p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-400 hover:text-zinc-600 transition-all flex items-center gap-1 text-[10px] font-bold"
-                    title="본문 전체 복사"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    본문 전체 복사
-                  </button>
+                  <div className="flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-950 p-1.5 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50">
+                    <span className="text-[10px] text-zinc-400 font-bold px-1 select-none">복사 스타일:</span>
+                    <button
+                      onClick={() => handleCopy(activeContent.body_text || "", "원고 전체 본문", "NAVER")}
+                      className="px-2.5 py-1 text-[10px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-emerald-600 dark:text-emerald-450 rounded-lg font-bold transition-all shadow-xs"
+                    >
+                      네이버 블로그 (서식)
+                    </button>
+                    <button
+                      onClick={() => handleCopy(activeContent.body_text || "", "원고 전체 본문", "TISTORY")}
+                      className="px-2.5 py-1 text-[10px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-600/30 hover:bg-amber-500/5 text-amber-700 dark:text-amber-500 rounded-lg font-bold transition-all shadow-xs"
+                    >
+                      티스토리 (서식)
+                    </button>
+                    <button
+                      onClick={() => handleCopy(activeContent.body_text || "", "원고 전체 본문", "HTML")}
+                      className="px-2.5 py-1 text-[10px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-sky-550/30 hover:bg-sky-500/5 text-sky-600 dark:text-sky-400 rounded-lg font-bold transition-all shadow-xs"
+                    >
+                      HTML 코드
+                    </button>
+                    <button
+                      onClick={() => handleCopy(activeContent.body_text || "", "원고 전체 본문", "PLAIN")}
+                      className="px-2.5 py-1 text-[10px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-150 dark:hover:bg-zinc-800 text-zinc-650 dark:text-zinc-300 rounded-lg font-bold transition-all shadow-xs"
+                    >
+                      텍스트만
+                    </button>
+                  </div>
                 </div>
               </div>
 

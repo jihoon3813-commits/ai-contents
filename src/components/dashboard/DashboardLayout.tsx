@@ -83,9 +83,8 @@ export default function DashboardLayoutClient({
     }
   };
 
-  const navItems = [
+  const navItems: { name: string; href: string; icon: any; count?: number }[] = [
     { name: "대시보드", href: "/dashboard", icon: LayoutDashboard },
-    { name: "브랜드 관리", href: "/brands", icon: Sparkles, count: brandCount },
     { name: "콘텐츠 기획", href: "/contents", icon: FileText },
     { name: "연동 설정", href: "/settings/integrations", icon: Link2 },
     { name: "프로필 설정", href: "/settings/profile", icon: User },

@@ -102,7 +102,7 @@ export default function OnboardingBrandPage() {
           초기 온보딩 설정
         </h2>
         <p className="mt-2 text-sm text-zinc-500">
-          사용자 맞춤형 AI 결과 도출을 위한 2단계 초기 설정을 완료해 주세요.
+          사용자 맞춤형 AI 결과 도출을 위한 초기 설정을 완료해 주세요.
         </p>
       </div>
 
@@ -111,11 +111,10 @@ export default function OnboardingBrandPage() {
           {/* 단계 표시기 */}
           <div className="flex justify-between items-center mb-8 border-b border-zinc-100 dark:border-zinc-800 pb-4">
             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase">
-              {step === 1 ? "1단계 / 2단계" : "2단계 / 2단계"}
+              콘텐츠 목적 설정
             </span>
             <div className="flex gap-1.5">
-              <span className={`h-2 w-8 rounded-full transition-colors ${step >= 1 ? "bg-primary" : "bg-zinc-200"}`} />
-              <span className={`h-2 w-8 rounded-full transition-colors ${step === 2 ? "bg-primary" : "bg-zinc-200"}`} />
+              <span className="h-2 w-8 rounded-full bg-primary" />
             </div>
           </div>
 
@@ -156,12 +155,16 @@ export default function OnboardingBrandPage() {
               <div className="flex justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
-                  disabled={goals.length === 0}
-                  className="flex items-center gap-2 py-2 px-5 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary/95 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  onClick={() => handleCompleteOnboarding()}
+                  disabled={goals.length === 0 || isLoading}
+                  className="flex items-center gap-2 py-2.5 px-6 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary/95 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
-                  다음 단계
-                  <ArrowRight className="h-4 w-4" />
+                  시작하기
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>

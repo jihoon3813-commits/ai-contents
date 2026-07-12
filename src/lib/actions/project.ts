@@ -665,3 +665,125 @@ export async function toggleArchiveProject(projectId: string, currentStatus: str
   revalidatePath("/contents");
   return data;
 }
+
+// 12. 단일 통합 기획 대시보드 저장 기능
+export async function saveSimplifiedProject(
+  projectId: string,
+  data: {
+    title: string;
+    topic: string;
+    demographics: {
+      age: string[];
+      gender: string;
+      region: string;
+      job: string;
+      interests: string[];
+    };
+    referenceUrl?: string;
+    imageCount: number;
+    imageStyle: string;
+    platforms: string[];
+  }
+) {
+  const { userId, workspaceId } = await verifyWorkspaceMembership();
+  const supabase = await createClient();
+
+  // 1. 기본 브랜드 조회
+  const { data: brand } = await supabase
+    .from("brands")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("is_default", true)
+    .maybeSingle();
+
+  if (!brand) {
+    throw new Error("기본 브랜드를 찾을 수 없습니다. 새로운 프로젝트 생성 시 브랜드가 자동 생성되나 누락되었습니다.");
+  }
+
+  // 2. 타겟 오디언스 설명 조합
+  const ageStr = data.demographics.age.length > 0 ? `연령대: ${data.demographics.age.join(", ")}` : "";
+  const genderStr = data.demographics.gender ? `성별: ${data.demographics.gender}` : "";
+  const regionStr = data.demographics.region ? `지역: ${data.demographics.region}` : "";
+  const jobStr = data.demographics.job ? `직업: ${data.demographics.job}` : "";
+  const interestStr = data.demographics.interests.length > 0 ? `관심사: ${data.demographics.interests.join(", ")}` : "";
+
+  const targetAudienceCombined = [ageStr, genderStr, regionStr, jobStr, interestStr]
+    .filter(Boolean)
+    .join(" | ");
+
+  // 3. 업데이트 데이터 조립
+  const updates: any = {
+    brand_id: brand.id,
+    title: data.title,
+    topic: data.topic,
+    primary_keyword: data.topic,
+    target_audience: targetAudienceCombined,
+    content_goal: "SEARCH_TRAFFIC",
+    content_type: "INFORMATIONAL",
+    source_notes: data.referenceUrl ? `참고 URL: ${data.referenceUrl}` : "",
+    requested_image_count: data.imageCount,
+    updated_by: userId,
+    updated_at: new Date().toISOString(),
+
+    // 필수 wizard_data 모조 채우기
+    wizard_data: {
+      step1: {
+        platforms: data.platforms,
+        category: "마케팅",
+        target_audience: targetAudienceCombined,
+        audience_stage: "AWARENESS"
+      },
+      step2: {
+        title: data.title,
+        topic: data.topic,
+        primary_keyword: data.topic,
+        secondary_keywords: [],
+        excluded_keywords: []
+      }
+    }
+  };
+
+  const { error: updateError } = await supabase
+    .from("content_projects")
+    .update(updates)
+    .eq("id", projectId);
+
+  if (updateError) throw new Error(`프로젝트 정보 업데이트 실패: ${updateError.message}`);
+
+  // 4. 플랫폼 연동 초기화
+  const { data: activePlats } = await supabase.from("platforms").select("*");
+  const platCodesToIds = new Map((activePlats || []).map((p) => [p.code, p.id]));
+
+  // 기존 매핑 삭제
+  await supabase
+    .from("project_platforms")
+    .delete()
+    .eq("project_id", projectId);
+
+  // 새 매핑 배치 삽입
+  const platformInserts = data.platforms.map((code: string) => {
+    const platformId = platCodesToIds.get(code);
+    if (!platformId) throw new Error(`지원하지 않는 플랫폼 코드: ${code}`);
+
+    const defaults = PLATFORM_DEFAULTS[code as keyof typeof PLATFORM_DEFAULTS];
+    return {
+      project_id: projectId,
+      platform_id: platformId,
+      target_character_count: defaults.target_character_count,
+      requested_image_count: data.imageCount,
+      platform_settings: {
+        ...defaults,
+        image_style: data.imageStyle,
+        requested_image_count: data.imageCount,
+      },
+    };
+  });
+
+  if (platformInserts.length > 0) {
+    const { error: piError } = await supabase.from("project_platforms").insert(platformInserts);
+    if (piError) throw new Error(`플랫폼 매핑 저장 실패: ${piError.message}`);
+  }
+
+  revalidatePath("/contents");
+  return { success: true };
+}

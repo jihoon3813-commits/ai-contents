@@ -224,41 +224,44 @@ export const completeOnboarding = mutation({
         });
       }
 
-      if (args.brandData) {
-        const activeBrands = await ctx.db
-          .query("brands")
-          .withIndex("by_workspace_active", (q) =>
-            q.eq("workspace_id", member.workspace_id).eq("deleted_at", undefined)
-          )
-          .collect();
+      const brandPayload = args.brandData || {
+        name: "기본 브랜드",
+        industry: "마케팅",
+        description: "기본 마케팅 브랜드 프로필",
+        target_audience: "일반 대중",
+      };
 
-        for (const b of activeBrands) {
-          if (b.is_default) {
-            await ctx.db.patch(b._id, { is_default: false });
-          }
+      const activeBrands = (await ctx.db
+        .query("brands")
+        .withIndex("by_workspace_id", (q) => q.eq("workspace_id", member.workspace_id))
+        .collect()).filter((b) => b.deleted_at === undefined);
+
+      for (const b of activeBrands) {
+        if (b.is_default) {
+          await ctx.db.patch(b._id, { is_default: false });
         }
-
-        const brandId = await ctx.db.insert("brands", {
-          workspace_id: member.workspace_id,
-          name: args.brandData.name,
-          industry: args.brandData.industry,
-          description: args.brandData.description,
-          target_audience: args.brandData.target_audience,
-          is_default: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-        await ctx.db.insert("brand_voice_profiles", {
-          brand_id: brandId,
-          style_description: "",
-          tones: [],
-          rules: [],
-          prohibited_words: [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
       }
+
+      const brandId = await ctx.db.insert("brands", {
+        workspace_id: member.workspace_id,
+        name: brandPayload.name,
+        industry: brandPayload.industry,
+        description: brandPayload.description,
+        target_audience: brandPayload.target_audience,
+        is_default: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      await ctx.db.insert("brand_voice_profiles", {
+        brand_id: brandId,
+        style_description: "",
+        tones: [],
+        rules: [],
+        prohibited_words: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
     }
 
     return { success: true };
