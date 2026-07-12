@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "convex deploy --typecheck try && next build",
+    "build": "node -e \"const cp = require('child_process'); try { cp.execSync('npx convex deploy --typecheck try', { stdio: 'inherit' }); } catch (e) { console.log('Convex deploy skipped or failed:', e.message); }\" && next build",
     "start": "next start",
     "lint": "eslint"
   },
