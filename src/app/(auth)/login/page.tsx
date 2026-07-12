@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -20,8 +20,12 @@ function LoginForm() {
   const nextParam = searchParams.get("next") ?? "/dashboard";
   const errorParam = searchParams.get("error");
 
+  const lastShownErrorRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (errorParam) {
+    if (errorParam && lastShownErrorRef.current !== errorParam) {
+      lastShownErrorRef.current = errorParam;
+      
       if (errorParam === "auth-callback-failed") {
         toast.error("인증에 실패하였습니다. 다시 시도해 주세요.");
       } else {
@@ -32,8 +36,19 @@ function LoginForm() {
         const jwtPayloadParam = searchParams.get("jwtPayload");
         toast.error(`로그인 해제 또는 실패 (${errorParam}): ${msg || "상세 정보 없음"} (쿠키목록: ${cookiesParam || "없음"}) (서버Convex주소: ${convexUrlParam || "없음"} / 서버Site주소: ${convexSiteUrlParam || "없음"}) (JWT페이로드: ${jwtPayloadParam || "없음"})`);
       }
+      
+      // URL에서 에러 파라미터를 제거하여 새로고침 시 토스트가 다시 뜨지 않도록 처리합니다 (next 파라미터는 유지).
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      url.searchParams.delete("msg");
+      url.searchParams.delete("cookies");
+      url.searchParams.delete("convexUrl");
+      url.searchParams.delete("convexSiteUrl");
+      url.searchParams.delete("jwtPayload");
+      
+      router.replace(url.pathname + url.search);
     }
-  }, [errorParam, searchParams, toast]);
+  }, [errorParam, searchParams, router, toast]);
 
   const {
     register,

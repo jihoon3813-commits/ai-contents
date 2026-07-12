@@ -48,7 +48,11 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
       const payload = decodeJwtPayload(jwtCookie.value);
       jwtPayloadStr = JSON.stringify(payload);
     }
-    return nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}&convexUrl=${encodeURIComponent(convexUrl)}&convexSiteUrl=${encodeURIComponent(convexSiteUrl)}&jwtPayload=${encodeURIComponent(jwtPayloadStr)}`);
+    const response = nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}&convexUrl=${encodeURIComponent(convexUrl)}&convexSiteUrl=${encodeURIComponent(convexSiteUrl)}&jwtPayload=${encodeURIComponent(jwtPayloadStr)}`);
+    response.cookies.delete("__Host-__convexAuthJWT");
+    response.cookies.delete("__convexAuthJWT");
+    response.cookies.delete("__convexAuthRefreshToken");
+    return response;
   }
   
   if (isSignInPage(request) && isAuthenticated) {
