@@ -67,7 +67,11 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   }
   
   if (isSignInPage(request) && isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, "/dashboard");
+    const errorParam = request.nextUrl.searchParams.get("error");
+    // 에러 파라미터가 있을 때는 무한 리다이렉트 루프를 방지하기 위해 대시보드로 이동시키지 않고 로그인 페이지로 보냅니다.
+    if (!errorParam) {
+      return nextjsMiddlewareRedirect(request, "/dashboard");
+    }
   }
 });
 

@@ -6,12 +6,11 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 export const getMyBrands = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const brands = await ctx.db
       .query("brands")
-      .withIndex("by_workspace_active", (q) =>
-        q.eq("workspace_id", args.workspaceId).eq("deleted_at", undefined)
-      )
+      .withIndex("by_workspace_id", (q) => q.eq("workspace_id", args.workspaceId))
       .collect();
+    return brands.filter((b) => b.deleted_at === undefined);
   },
 });
 
