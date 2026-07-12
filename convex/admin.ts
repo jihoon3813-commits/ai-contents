@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -118,5 +118,16 @@ export const saveSystemSetting = mutation({
     }
 
     return { success: true };
+  },
+});
+
+export const getSystemSettingInternal = query({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    const setting = await ctx.db
+      .query("system_settings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    return setting?.value || null;
   },
 });

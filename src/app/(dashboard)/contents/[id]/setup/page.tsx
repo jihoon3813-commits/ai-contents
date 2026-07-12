@@ -37,12 +37,30 @@ export default async function SetupPage({ params }: SetupPageProps) {
     .eq("project_id", projectId)
     .maybeSingle();
 
+  // 5. 어드민 등록 API 키 유효성 체크
+  let isAiKeyConfigured = false;
+  try {
+    const { fetchQuery } = await import("convex/nextjs");
+    const { api } = await import("@/../convex/_generated/api");
+    const { convexAuthNextjsToken } = await import("@convex-dev/auth/nextjs/server");
+    const token = await convexAuthNextjsToken();
+    if (token) {
+      const key = await fetchQuery(api.admin.getSystemSetting, { key: "AI_API_KEY" }, { token });
+      if (key && key.startsWith("AIzaSy")) {
+        isAiKeyConfigured = true;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to verify Gemini API Key configuration:", err);
+  }
+
   return (
     <SetupWizardClient
       project={project}
       brands={brands || []}
       platforms={platforms || []}
       initialExperience={experience || null}
+      isAiKeyConfigured={isAiKeyConfigured}
     />
   );
 }

@@ -25,6 +25,7 @@ interface SetupWizardClientProps {
   brands: any[];
   platforms: any[];
   initialExperience: any;
+  isAiKeyConfigured?: boolean;
 }
 
 // 실시간 트렌드 기본 데이터
@@ -98,7 +99,7 @@ const PLATFORMS_INFO = [
   { id: "INSTAGRAM", code: "INSTAGRAM", name: "인스타그램", seo: "줄바꿈 보정, 핵심 해시태그 카드화 및 숏폼 캡션 최적화", color: "border-pink-500/20 hover:border-pink-500/60 dark:bg-pink-950/10 text-pink-600 dark:text-pink-400 bg-pink-500/5" },
 ];
 
-export default function SetupWizardClient({ project, platforms }: SetupWizardClientProps) {
+export default function SetupWizardClient({ project, platforms, brands, initialExperience, isAiKeyConfigured = false }: SetupWizardClientProps) {
   const router = useRouter();
   const toast = useToast();
   const [isPending, startTransition] = useTransition();
@@ -470,6 +471,14 @@ export default function SetupWizardClient({ project, platforms }: SetupWizardCli
                     추천받기
                   </button>
                 </div>
+
+                {!isAiKeyConfigured && (
+                  <div className="p-3 text-[11px] leading-relaxed bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl text-amber-700 dark:text-amber-400">
+                    ⚠️ 등록된 Gemini API 키가 없거나 형식이 올바르지 않아 기본 템플릿 추천으로 동작 중입니다. 
+                    <br />
+                    어드민 메뉴의 API 연동 탭에서 <strong>AIzaSy...</strong>로 시작하는 구글 AI Studio API 키를 올바르게 등록해 주십시오.
+                  </div>
+                )}
 
                 {aiSuggestions.length > 0 && (
                   <div className="space-y-2">
