@@ -6,6 +6,7 @@ import { verifyWorkspaceMembership } from "@/lib/actions/generation";
 import { Loader2, Sparkles } from "lucide-react";
 
 export default async function NewProjectPage() {
+  console.log("NewProjectPage: Initializing project creation session...");
   const supabase = await createClient();
 
   // 1. 유효한 브랜드 목록 조회
