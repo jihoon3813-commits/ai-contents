@@ -7,6 +7,47 @@ import { getPromptTemplate } from "@/lib/supabase/prompt_seeder";
 import { sanitizeHtml } from "@/lib/utils/sanitizer";
 import { getProject, getProjectExperience, getProjectPlatforms } from "./project";
 
+// 헬퍼: URL 표준화 (Naver Blog iframe 우회 등)
+function standardizeScrapeUrl(url: string): string {
+  const trimmed = url.trim();
+  
+  // Naver Blog 패턴 1: https://blog.naver.com/username/postnumber
+  const naverBlog1 = trimmed.match(/https?:\/\/blog\.naver\.com\/([a-zA-Z0-9_-]+)\/([0-9]+)/);
+  if (naverBlog1) {
+    const [_, username, postId] = naverBlog1;
+    return `https://m.blog.naver.com/${username}/${postId}`;
+  }
+  
+  // Naver Blog 패턴 2: https://blog.naver.com/PostView.naver?blogId=username&logNo=postnumber
+  if (trimmed.includes("blog.naver.com/PostView")) {
+    const blogIdMatch = trimmed.match(/blogId=([a-zA-Z0-9_-]+)/);
+    const logNoMatch = trimmed.match(/logNo=([0-9]+)/);
+    if (blogIdMatch && logNoMatch) {
+      return `https://m.blog.naver.com/${blogIdMatch[1]}/${logNoMatch[2]}`;
+    }
+  }
+
+  return trimmed;
+}
+
+// 헬퍼: HTML 태그 제거 및 텍스트 추출
+function extractCleanTextFromHtml(html: string): string {
+  // script 및 style 태그 본문 제거
+  let text = html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, "");
+  // 모든 HTML 태그 제거
+  text = text.replace(/<[^>]+>/g, " ");
+  // 엔티티 디코딩 기초
+  text = text.replace(/&nbsp;/g, " ")
+             .replace(/&lt;/g, "<")
+             .replace(/&gt;/g, ">")
+             .replace(/&amp;/g, "&")
+             .replace(/&quot;/g, '"');
+  // 연속 공백 단일화
+  text = text.replace(/\s+/g, " ").trim();
+  // 5000자 제한
+  return text.slice(0, 5000);
+}
+
 // 헬퍼: 워크스페이스 권한 검증
 export async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "ADMIN", "EDITOR"]) {
   // 1. Convex Auth 인증 상태 우선 확인
@@ -267,8 +308,42 @@ export async function generateBrief(projectId: string) {
     experienceInfo = `사용기간: ${experience.usage_period || ""}, 가격: ${experience.price_info || ""}, 동기: ${experience.motivation || ""}, 전후비교: ${experience.problem_before || ""} -> ${experience.change_after || ""}, 장단점: 장점 [${experience.advantages || ""}] / 단점 [${experience.disadvantages || ""}], 에피소드: ${experience.real_episode || ""}`;
   }
 
+  // 1) 참고 URL 스크래핑 및 본문 추출 처리
+  let referenceUrlContent = "";
+  if (project.source_notes && project.source_notes.includes("참고 URL: ")) {
+    const urlMatch = project.source_notes.match(/참고 URL:\s*(https?:\/\/\S+)/);
+    if (urlMatch && urlMatch[1]) {
+      const targetUrl = standardizeScrapeUrl(urlMatch[1]);
+      try {
+        console.log(`[URL 스크래핑] 대상 URL: ${targetUrl}`);
+        const res = await fetch(targetUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
+          },
+          next: { revalidate: 3600 }
+        });
+        if (res.ok) {
+          const html = await res.text();
+          referenceUrlContent = extractCleanTextFromHtml(html);
+          console.log(`[URL 스크래핑 성공] 글자수: ${referenceUrlContent.length}`);
+        } else {
+          console.warn(`[URL 스크래핑 실패] HTTP 상태 코드: ${res.status}`);
+        }
+      } catch (scrapeErr) {
+        console.error("[URL 스크래핑 에러]", scrapeErr);
+      }
+    }
+  }
+
+  let finalTopic = project.topic || "새 마케팅 카피 기획";
+  if (referenceUrlContent) {
+    finalTopic += `\n\n[참고 자료 - 다음 URL 본문 텍스트를 참고하여, 카피에 걸리지 않는 독창적인 다른 문장 구조로 비슷한 주제의 글을 작성하시오]:\n${referenceUrlContent}`;
+  }
+
   const aiInputs = {
-    topic: project.topic || "새 마케팅 카피 기획",
+    topic: finalTopic,
     keywords: `핵심: ${project.primary_keyword}, 보조: ${(project.secondary_keywords || []).join(", ")}`,
     brand_info: brandInfo,
     experience_info: experienceInfo,

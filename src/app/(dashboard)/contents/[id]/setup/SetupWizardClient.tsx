@@ -288,19 +288,15 @@ export default function SetupWizardClient({ project, platforms }: SetupWizardCli
           return;
         }
 
-        // 2. 브리프 - 개요 - 본문 연속 풀 파이프라인 가동
-        const genRes = await startAutoGeneration(project.id);
-        if (!genRes.success) {
-          toast.dismiss(loadingId);
-          toast.error(genRes.error || "AI 콘텐츠 자동 생성 실패");
-          return;
-        }
+        // 2. 1단계: AI 기획 브리프 분석 생성
+        const { generateBrief } = await import("@/lib/actions/generation");
+        await generateBrief(project.id);
 
         toast.dismiss(loadingId);
-        toast.success("기획 확정 및 AI 멀티채널 글/이미지 작성이 시작되었습니다!");
+        toast.success("기획 확정 및 AI 기획 브리프 분석이 완료되었습니다!");
         
-        // 생성중 대기 화면으로 논스톱 라우팅
-        router.push(`/contents/${project.id}/generating`);
+        // 브리프 단계별 검토 화면으로 라우팅
+        router.push(`/contents/${project.id}/brief`);
       } catch (err: any) {
         toast.dismiss(loadingId);
         toast.error(`기획 처리 중 오류가 발생했습니다: ${err.message || "오류 발생"}`);
