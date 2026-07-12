@@ -14,6 +14,9 @@ const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/onboarding(.*)",
   "/admin(.*)",
+  "/contents(.*)",
+  "/brands(.*)",
+  "/settings(.*)",
 ]);
 
 function decodeJwtPayload(token: string): any {
