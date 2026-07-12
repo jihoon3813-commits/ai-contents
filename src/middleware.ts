@@ -42,7 +42,7 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   console.log(`[Middleware] Path: ${request.nextUrl.pathname}, Auth: ${isAuthenticated}, Cookies: ${allCookies.join(", ")}, URL: ${convexUrl}, SiteURL: ${convexSiteUrl}`);
   
   if (isProtectedRoute(request) && !isAuthenticated) {
-    const jwtCookie = request.cookies.get("__Host-___convexAuthJWT") || request.cookies.get("___convexAuthJWT");
+    const jwtCookie = request.cookies.get("__Host-__convexAuthJWT") || request.cookies.get("__convexAuthJWT");
     let jwtPayloadStr = "none";
     if (jwtCookie?.value) {
       const payload = decodeJwtPayload(jwtCookie.value);
