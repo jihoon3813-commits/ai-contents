@@ -20,7 +20,7 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const isAuthenticated = await convexAuth.isAuthenticated();
   
   if (isProtectedRoute(request) && !isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, "/login");
+    return nextjsMiddlewareRedirect(request, "/login?error=middleware_unauthenticated");
   }
   
   if (isSignInPage(request) && isAuthenticated) {

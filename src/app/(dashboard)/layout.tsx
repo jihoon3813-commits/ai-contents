@@ -13,21 +13,27 @@ export default async function DashboardLayout({
   const token = await convexAuthNextjsToken();
 
   if (!token) {
-    redirect("/login");
+    redirect("/login?error=no_token_layout");
   }
 
   // 1. 프로필 정보 조회 (없으면 자동 생성)
-  let profile = await fetchQuery(api.profiles.get, {}, { token });
-  if (!profile) {
-    profile = await fetchMutation(
-      api.profiles.ensureProfileExists,
-      { name: "사용자" },
-      { token }
-    );
+  let profile;
+  try {
+    profile = await fetchQuery(api.profiles.get, {}, { token });
+    if (!profile) {
+      profile = await fetchMutation(
+        api.profiles.ensureProfileExists,
+        { name: "사용자" },
+        { token }
+      );
+    }
+  } catch (err: any) {
+    console.error("DashboardLayout Profile Fetch Error:", err);
+    redirect(`/login?error=profile_fetch_failed&msg=${encodeURIComponent(err.message || "Unknown error")}`);
   }
 
   if (!profile) {
-    redirect("/login");
+    redirect("/login?error=profile_not_created");
   }
 
   if (!profile.onboarding_completed) {
@@ -35,7 +41,13 @@ export default async function DashboardLayout({
   }
 
   // 2. 소속 워크스페이스 목록 조회
-  const workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
+  let workspaces = [];
+  try {
+    workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
+  } catch (err: any) {
+    console.error("DashboardLayout Workspace Fetch Error:", err);
+    redirect(`/login?error=workspace_fetch_failed&msg=${encodeURIComponent(err.message || "Unknown error")}`);
+  }
 
   // 3. 활성 워크스페이스의 브랜드 개수 및 기본 브랜드 명칭 페치
   let brandCount = 0;

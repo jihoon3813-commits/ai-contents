@@ -21,10 +21,15 @@ function LoginForm() {
   const errorParam = searchParams.get("error");
 
   useEffect(() => {
-    if (errorParam === "auth-callback-failed") {
-      toast.error("인증에 실패하였습니다. 다시 시도해 주세요.");
+    if (errorParam) {
+      if (errorParam === "auth-callback-failed") {
+        toast.error("인증에 실패하였습니다. 다시 시도해 주세요.");
+      } else {
+        const msg = searchParams.get("msg");
+        toast.error(`로그인 해제 또는 실패 (${errorParam}): ${msg || "상세 정보 없음"}`);
+      }
     }
-  }, [errorParam, toast]);
+  }, [errorParam, searchParams, toast]);
 
   const {
     register,
