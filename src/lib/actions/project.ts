@@ -20,6 +20,27 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
   } = await supabase.auth.getUser();
 
   if (!user) {
+    try {
+      const { convexAuthNextjsToken } = await import("@convex-dev/auth/nextjs/server");
+      const token = await convexAuthNextjsToken();
+      if (token) {
+        const { fetchQuery } = await import("convex/nextjs");
+        const { api } = await import("../../../convex/_generated/api");
+        const profile = await fetchQuery(api.profiles.get, {}, { token });
+        if (profile) {
+          const workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
+          if (workspaces.length > 0) {
+            const activeWs = workspaces[0];
+            if (!requiredRoles.includes(activeWs.role)) {
+              throw new Error("해당 작업을 수행할 권한이 없습니다.");
+            }
+            return { userId: profile.userId, workspaceId: activeWs.id, userRole: activeWs.role };
+          }
+        }
+      }
+    } catch (convexAuthErr) {
+      console.error("verifyWorkspaceMembership Convex Auth Fallback Error:", convexAuthErr);
+    }
     throw new Error("인증되지 않은 사용자입니다.");
   }
 

@@ -18,7 +18,7 @@ const dummyProxy: any = new Proxy(() => {}, {
     return new Proxy(() => {}, {
       get(t, p) {
         if (p === "then") {
-          return (resolve: any) => resolve({ data: null, error: null });
+          return (resolve: any) => resolve({ data: [], error: null });
         }
         return dummyProxy;
       },
