@@ -3,13 +3,29 @@ import { cookies } from "next/headers";
 
 const dummyProxy: any = new Proxy(() => {}, {
   get(target, prop) {
+    if (prop === "auth") {
+      return {
+        getUser: async () => ({ data: { user: null }, error: null }),
+        getSession: async () => ({ data: { session: null }, error: null }),
+      };
+    }
     if (prop === "then") {
-      return (resolve: any) => resolve({ data: { user: null }, error: null });
+      return undefined;
     }
     return dummyProxy;
   },
   apply(target, thisArg, argumentsList) {
-    return dummyProxy;
+    return new Proxy(() => {}, {
+      get(t, p) {
+        if (p === "then") {
+          return (resolve: any) => resolve({ data: null, error: null });
+        }
+        return dummyProxy;
+      },
+      apply(t, ta, al) {
+        return dummyProxy;
+      }
+    });
   }
 });
 
