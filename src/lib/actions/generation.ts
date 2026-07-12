@@ -9,33 +9,36 @@ import { getProject, getProjectExperience, getProjectPlatforms } from "./project
 
 // 헬퍼: 워크스페이스 권한 검증
 export async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "ADMIN", "EDITOR"]) {
+  // 1. Convex Auth 인증 상태 우선 확인
+  try {
+    const { convexAuthNextjsToken } = await import("@convex-dev/auth/nextjs/server");
+    const token = await convexAuthNextjsToken();
+    if (token) {
+      const { fetchQuery } = await import("convex/nextjs");
+      const { api } = await import("../../../convex/_generated/api");
+      const profile = await fetchQuery(api.profiles.get, {}, { token });
+      if (profile) {
+        const workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
+        if (workspaces.length > 0) {
+          const activeWs = workspaces[0];
+          if (!requiredRoles.includes(activeWs.role)) {
+            throw new Error("해당 작업을 수행할 권한이 없습니다.");
+          }
+          return { userId: profile.userId, workspaceId: activeWs.id, userRole: activeWs.role };
+        }
+      }
+    }
+  } catch (convexAuthErr) {
+    console.error("verifyWorkspaceMembership Convex Auth Error:", convexAuthErr);
+  }
+
+  // 2. Convex Auth 토큰이 없을 때만 기존 Supabase Auth 조회
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    try {
-      const { convexAuthNextjsToken } = await import("@convex-dev/auth/nextjs/server");
-      const token = await convexAuthNextjsToken();
-      if (token) {
-        const { fetchQuery } = await import("convex/nextjs");
-        const { api } = await import("../../../convex/_generated/api");
-        const profile = await fetchQuery(api.profiles.get, {}, { token });
-        if (profile) {
-          const workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
-          if (workspaces.length > 0) {
-            const activeWs = workspaces[0];
-            if (!requiredRoles.includes(activeWs.role)) {
-              throw new Error("해당 작업을 수행할 권한이 없습니다.");
-            }
-            return { userId: profile.userId, workspaceId: activeWs.id, userRole: activeWs.role };
-          }
-        }
-      }
-    } catch (convexAuthErr) {
-      console.error("verifyWorkspaceMembership Convex Auth Fallback Error:", convexAuthErr);
-    }
     throw new Error("인증되지 않은 사용자입니다.");
   }
 
