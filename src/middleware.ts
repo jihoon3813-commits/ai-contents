@@ -22,7 +22,8 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   console.log(`[Middleware] Path: ${request.nextUrl.pathname}, Auth: ${isAuthenticated}, Cookies: ${allCookies.join(", ")}`);
   
   if (isProtectedRoute(request) && !isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}`);
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "undefined";
+    return nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}&convexUrl=${encodeURIComponent(convexUrl)}`);
   }
   
   if (isSignInPage(request) && isAuthenticated) {

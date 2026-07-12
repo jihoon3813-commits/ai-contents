@@ -27,7 +27,8 @@ function LoginForm() {
       } else {
         const msg = searchParams.get("msg");
         const cookiesParam = searchParams.get("cookies");
-        toast.error(`로그인 해제 또는 실패 (${errorParam}): ${msg || "상세 정보 없음"} (쿠키목록: ${cookiesParam || "없음"})`);
+        const convexUrlParam = searchParams.get("convexUrl");
+        toast.error(`로그인 해제 또는 실패 (${errorParam}): ${msg || "상세 정보 없음"} (쿠키목록: ${cookiesParam || "없음"}) (서버Convex주소: ${convexUrlParam || "없음"})`);
       }
     }
   }, [errorParam, searchParams, toast]);
