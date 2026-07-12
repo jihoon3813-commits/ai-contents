@@ -30,9 +30,52 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
             throw new Error("해당 작업을 수행할 권한이 없습니다.");
           }
 
-          // Convex Workspace Slug를 기준으로 Supabase Workspace UUID 조회 및 자동 생성 동기화
           const { createAdminClient } = await import("@/lib/supabase/server");
           const adminSupabase = createAdminClient();
+
+          // 1) Convex User Email을 조회하여 Supabase User UUID 획득 및 프로필 동기화
+          const email = await fetchQuery(api.profiles.getCurrentUserEmail, {}, { token });
+          if (!email) {
+            throw new Error("Convex 사용자 이메일을 찾을 수 없습니다.");
+          }
+
+          const { data: userData } = await adminSupabase.auth.admin.getUserByEmail(email);
+          let supabaseUserId = userData?.user?.id;
+
+          if (!supabaseUserId) {
+            // Supabase에 유저가 없을 경우 자동 생성
+            const { data: createdUser } = await adminSupabase.auth.admin.createUser({
+              email: email,
+              email_confirm: true,
+              user_metadata: { name: profile.name || "사용자" }
+            });
+            supabaseUserId = createdUser?.user?.id;
+          }
+
+          if (!supabaseUserId) {
+            throw new Error("Supabase 사용자 동기화 실패");
+          }
+
+          // Supabase public.profiles 레코드 존재 보장
+          const { data: supabaseProfile } = await adminSupabase
+            .from("profiles")
+            .select("id")
+            .eq("id", supabaseUserId)
+            .maybeSingle();
+
+          if (!supabaseProfile) {
+            await adminSupabase.from("profiles").insert({
+              id: supabaseUserId,
+              name: profile.name || "사용자",
+              avatar_url: profile.avatar_url,
+              timezone: profile.timezone || "Asia/Seoul",
+              language: profile.language || "ko",
+              onboarding_completed: true,
+              is_admin: profile.is_admin || false,
+            });
+          }
+
+          // 2) Convex Workspace Slug를 기준으로 Supabase Workspace UUID 조회 및 자동 생성 동기화
           const { data: supabaseWs } = await adminSupabase
             .from("workspaces")
             .select("id")
@@ -58,7 +101,7 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
             throw new Error("Supabase 워크스페이스 동기화 실패");
           }
 
-          return { userId: profile.userId, workspaceId: supabaseWorkspaceId, userRole: activeWs.role };
+          return { userId: supabaseUserId, workspaceId: supabaseWorkspaceId, userRole: activeWs.role };
         }
       }
     }

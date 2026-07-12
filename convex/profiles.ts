@@ -267,3 +267,15 @@ export const completeOnboarding = mutation({
     return { success: true };
   },
 });
+
+export const getCurrentUserEmail = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+    const user = await ctx.db.get(userId);
+    return user?.email || null;
+  },
+});
