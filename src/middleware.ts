@@ -49,9 +49,20 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
       jwtPayloadStr = JSON.stringify(payload);
     }
     const response = nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}&convexUrl=${encodeURIComponent(convexUrl)}&convexSiteUrl=${encodeURIComponent(convexSiteUrl)}&jwtPayload=${encodeURIComponent(jwtPayloadStr)}`);
-    response.cookies.delete("__Host-__convexAuthJWT");
-    response.cookies.delete("__convexAuthJWT");
-    response.cookies.delete("__convexAuthRefreshToken");
+    
+    // 로컬호스트 여부에 맞게 secure 옵션을 설정하여 쿠키 삭제 처리합니다.
+    const isLocalhost = request.headers.get("Host")?.includes("localhost") ?? false;
+    const deleteOptions = {
+      secure: !isLocalhost,
+      httpOnly: true,
+      sameSite: "lax" as const,
+      path: "/",
+      expires: new Date(0),
+    };
+    response.cookies.set("__Host-__convexAuthJWT", "", deleteOptions);
+    response.cookies.set("__convexAuthJWT", "", deleteOptions);
+    response.cookies.set("__convexAuthRefreshToken", "", deleteOptions);
+    response.cookies.set("__Host-__convexAuthRefreshToken", "", deleteOptions);
     return response;
   }
   
