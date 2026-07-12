@@ -2,21 +2,23 @@ import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import { FileText, Type, Clock, AlertTriangle, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name")
-    .eq("id", user?.id || "")
-    .maybeSingle();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user?.id || "")
+      .maybeSingle();
 
-  const userName = profile?.name || user?.email?.split("@")[0] || "사용자";
+    const userName = profile?.name || user?.email?.split("@")[0] || "사용자";
 
   // 활성 워크스페이스의 브랜드 조회
   const { data: member } = await supabase
@@ -202,4 +204,8 @@ export default async function DashboardPage() {
       </div>
     </div>
   );
+  } catch (err: any) {
+    console.error("DashboardPage CRITICAL Error:", err);
+    redirect(`/login?error=critical_page_error&msg=${encodeURIComponent(err.message || "Unknown error")}`);
+  }
 }
