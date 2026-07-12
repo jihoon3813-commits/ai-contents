@@ -301,6 +301,49 @@ export default function ResultClient({ project, contents, initialImagePlans }: R
                 추천 이미지 기획 구성안 ({filteredImagePlans.length})
               </h3>
 
+              {/* 챗GPT용 원클릭 통합 이미지 생성 프롬프트 카드 */}
+              {filteredImagePlans.length > 0 && (
+                <div className="p-4 border border-indigo-500/25 bg-indigo-500/5 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-indigo-600" />
+                      <span className="text-xs font-extrabold text-indigo-950 dark:text-indigo-200">
+                        ChatGPT 일괄 이미지 생성 통합 프롬프트
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const styleDesc = filteredImagePlans[0]?.prompt?.includes("photograph") ? "realistic photography style"
+                          : filteredImagePlans[0]?.prompt?.includes("3d") ? "3D rendering graphic style"
+                          : filteredImagePlans[0]?.prompt?.includes("illustration") ? "modern digital illustration style"
+                          : filteredImagePlans[0]?.prompt?.includes("minimal") ? "minimal flat vector illustration style"
+                          : "water-color painting style";
+                          
+                        const combinedPrompt = `You are DALL-E. Please generate exactly ${filteredImagePlans.length} separate marketing images one by one in a single session for my blog posts based on the descriptions below.
+Keep all images visually consistent and optimized as a set, using a "${styleDesc}".
+
+Here is the exact description for each of the ${filteredImagePlans.length} images:
+${filteredImagePlans.map((ip) => `[Image #${ip.sequence_number}]
+- Role: ${ip.role}
+- Visual Scene: ${ip.description}
+- Core Composition: ${ip.prompt}
+- Aspect Ratio: ${ip.aspect_ratio || "16:9"}`).join("\n\n")}
+
+Please start by rendering the first image directly without any greeting, and then proceed with the remaining ones automatically.`;
+                        handleCopy(combinedPrompt, "ChatGPT 통합 이미지 프롬프트");
+                      }}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-extrabold transition-all shadow-md shadow-indigo-600/10 flex items-center gap-1"
+                    >
+                      <Copy className="h-3 w-3" />
+                      통합 프롬프트 복사
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    선택하신 이미지 개수(<strong>{filteredImagePlans.length}개</strong>)를 ChatGPT(DALL-E)에 한 번에 입력하여 **일관성 있는 비주얼 스타일 세트**로 동시 출력하도록 정교하게 설계된 특별 셸 프롬프트입니다. 클릭하여 ChatGPT 대화창에 바로 복사해 보세요!
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {filteredImagePlans.map((ip) => (
                   <div
