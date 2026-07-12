@@ -1003,31 +1003,36 @@ export async function retrySection(sectionId: string) {
 
 // 6. 단일 기획 화면에서 브리프-개요-콘텐츠 생성까지 논스톱 파이프라인 자동화
 export async function startAutoGeneration(projectId: string) {
-  // 1. 브리프 생성 및 승인
-  await generateBrief(projectId);
-  await approveBrief(projectId);
+  try {
+    // 1. 브리프 생성 및 승인
+    await generateBrief(projectId);
+    await approveBrief(projectId);
 
-  // 2. 공통 개요 생성
-  await generateCommonOutline(projectId);
+    // 2. 공통 개요 생성
+    await generateCommonOutline(projectId);
 
-  // 3. 생성된 공통 개요 ID 찾기
-  const supabase = await createClient();
-  const { data: outline } = await supabase
-    .from("content_outlines")
-    .select("id")
-    .eq("project_id", projectId)
-    .is("platform_id", null)
-    .single();
+    // 3. 생성된 공통 개요 ID 찾기
+    const supabase = await createClient();
+    const { data: outline } = await supabase
+      .from("content_outlines")
+      .select("id")
+      .eq("project_id", projectId)
+      .is("platform_id", null)
+      .single();
 
-  if (!outline) {
-    throw new Error("공통 개요 생성 후 개요 정보를 찾을 수 없습니다.");
+    if (!outline) {
+      return { success: false, error: "공통 개요 생성 후 개요 정보를 찾을 수 없습니다." };
+    }
+
+    // 4. 개요 승인
+    await approveOutline(outline.id);
+
+    // 5. 플랫폼 콘텐츠 본문 생성 개시
+    await generatePlatformContents(projectId);
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("startAutoGeneration error:", err);
+    return { success: false, error: err.message || "콘텐츠 자동 생성 프로세스 중 예외가 발생했습니다." };
   }
-
-  // 4. 개요 승인
-  await approveOutline(outline.id);
-
-  // 5. 플랫폼 콘텐츠 본문 생성 개시
-  await generatePlatformContents(projectId);
-
-  return { success: true };
 }

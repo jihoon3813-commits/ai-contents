@@ -266,7 +266,7 @@ export default function SetupWizardClient({ project, platforms }: SetupWizardCli
       const loadingId = toast.loading("기획안을 반영하고 AI 콘텐츠 생성을 개시하고 있습니다. (약 10~20초 소요)...");
       try {
         // 1. 심플 기획 데이터 저장
-        await saveSimplifiedProject(project.id, {
+        const saveRes = await saveSimplifiedProject(project.id, {
           title,
           topic,
           demographics: {
@@ -282,8 +282,19 @@ export default function SetupWizardClient({ project, platforms }: SetupWizardCli
           platforms: selectedPlatforms,
         });
 
+        if (!saveRes.success) {
+          toast.dismiss(loadingId);
+          toast.error(saveRes.error || "기획안 저장 실패");
+          return;
+        }
+
         // 2. 브리프 - 개요 - 본문 연속 풀 파이프라인 가동
-        await startAutoGeneration(project.id);
+        const genRes = await startAutoGeneration(project.id);
+        if (!genRes.success) {
+          toast.dismiss(loadingId);
+          toast.error(genRes.error || "AI 콘텐츠 자동 생성 실패");
+          return;
+        }
 
         toast.dismiss(loadingId);
         toast.success("기획 확정 및 AI 멀티채널 글/이미지 작성이 시작되었습니다!");
