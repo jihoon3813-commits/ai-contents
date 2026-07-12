@@ -26,7 +26,11 @@ export default async function DashboardLayout({
     );
   }
 
-  if (profile && !profile.onboarding_completed) {
+  if (!profile) {
+    redirect("/login");
+  }
+
+  if (!profile.onboarding_completed) {
     redirect("/onboarding/brand");
   }
 
@@ -54,10 +58,16 @@ export default async function DashboardLayout({
     }
   }
 
+  const formattedProfile = {
+    name: profile.name,
+    avatar_url: profile.avatar_url ?? null,
+    is_admin: profile.is_admin,
+  };
+
   return (
     <DashboardLayoutClient
       userEmail={profile.name}
-      profile={profile}
+      profile={formattedProfile}
       workspaces={workspaces}
       brandCount={brandCount}
       defaultBrandName={defaultBrandName}
