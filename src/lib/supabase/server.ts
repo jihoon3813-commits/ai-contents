@@ -39,6 +39,22 @@ export async function createClient() {
     return dummyProxy;
   }
 
+  // Convex Auth 인증 상태 확인 (Convex 사용 중일 경우 RLS 우회)
+  let hasConvexToken = false;
+  try {
+    const { convexAuthNextjsToken } = await import("@convex-dev/auth/nextjs/server");
+    const token = await convexAuthNextjsToken();
+    if (token) {
+      hasConvexToken = true;
+    }
+  } catch (err) {
+    // Ignore error
+  }
+
+  if (hasConvexToken) {
+    return createAdminClient();
+  }
+
   const cookieStore = await cookies();
 
   return createServerClient(
