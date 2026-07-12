@@ -5,6 +5,10 @@ import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "../../../convex/_generated/api";
 import DashboardLayoutClient from "@/components/dashboard/DashboardLayout";
 
+function isRedirectError(err: any) {
+  return err && (err.digest?.startsWith("NEXT_REDIRECT") || err.message === "NEXT_REDIRECT");
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -29,6 +33,7 @@ export default async function DashboardLayout({
         );
       }
     } catch (err: any) {
+      if (isRedirectError(err)) throw err;
       console.error("DashboardLayout Profile Fetch Error:", err);
       redirect(`/login?error=profile_fetch_failed&msg=${encodeURIComponent(err.message || "Unknown error")}`);
     }
@@ -46,6 +51,7 @@ export default async function DashboardLayout({
     try {
       workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
     } catch (err: any) {
+      if (isRedirectError(err)) throw err;
       console.error("DashboardLayout Workspace Fetch Error:", err);
       redirect(`/login?error=workspace_fetch_failed&msg=${encodeURIComponent(err.message || "Unknown error")}`);
     }
@@ -89,6 +95,7 @@ export default async function DashboardLayout({
       </DashboardLayoutClient>
     );
   } catch (err: any) {
+    if (isRedirectError(err)) throw err;
     console.error("DashboardLayout CRITICAL Error:", err);
     redirect(`/login?error=critical_layout_error&msg=${encodeURIComponent(err.message || "Unknown error")}`);
   }
