@@ -18,7 +18,7 @@ export async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNE
     throw new Error("인증되지 않은 사용자입니다.");
   }
 
-  const { data: member, error } = await supabase
+  let { data: member, error } = await supabase
     .from("workspace_members")
     .select("workspace_id, role")
     .eq("user_id", user.id)
@@ -26,7 +26,83 @@ export async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNE
     .maybeSingle();
 
   if (error || !member) {
-    throw new Error("워크스페이스 멤버십이 존재하지 않습니다.");
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/server");
+      const adminSupabase = createAdminClient();
+      const userName = user.user_metadata?.name || user.email?.split("@")[0] || "사용자";
+      
+      // 1) 프로필 확인 및 생성
+      const { data: profile } = await adminSupabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (!profile) {
+        await adminSupabase.from("profiles").insert({
+          id: user.id,
+          name: userName,
+          timezone: "Asia/Seoul",
+          language: "ko",
+          onboarding_completed: false,
+          is_admin: false,
+        });
+      }
+
+      // 2) 워크스페이스 생성 및 ID 조회
+      const slug = `ws-${user.id.slice(0, 8)}-${Math.random().toString(36).substring(2, 6)}`;
+      const { data: newWs, error: wsError } = await adminSupabase
+        .from("workspaces")
+        .insert({
+          name: `${userName}의 워크스페이스`,
+          slug,
+          owner_id: user.id,
+          plan_code: "FREE",
+          status: "ACTIVE",
+          settings: {},
+        })
+        .select("id")
+        .single();
+
+      if (wsError || !newWs) {
+        throw new Error(wsError?.message || "워크스페이스 생성 실패");
+      }
+
+      // 3) 워크스페이스 멤버 추가
+      await adminSupabase.from("workspace_members").insert({
+        workspace_id: newWs.id,
+        user_id: user.id,
+        role: "OWNER",
+        status: "ACTIVE",
+      });
+
+      // 4) 구독 추가
+      await adminSupabase.from("subscriptions").insert({
+        workspace_id: newWs.id,
+        plan_code: "FREE",
+        status: "ACTIVE",
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        limits: { words_limit: 10000, images_limit: 20 },
+      });
+
+      // 다시 한 번 멤버 조회
+      const retryResult = await supabase
+        .from("workspace_members")
+        .select("workspace_id, role")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (retryResult.data) {
+        member = retryResult.data;
+      } else {
+        throw new Error("워크스페이스 멤버십 재로드 실패");
+      }
+    } catch (createErr: any) {
+      console.error("verifyWorkspaceMembership Auto-Create Error:", createErr);
+      throw new Error("워크스페이스 멤버십이 존재하지 않으며, 자동 생성에 실패했습니다.");
+    }
   }
 
   if (!requiredRoles.includes(member.role)) {
