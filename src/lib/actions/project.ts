@@ -789,7 +789,7 @@ export async function saveSimplifiedProject(
     if (updateError) return { success: false, error: `프로젝트 정보 업데이트 실패: ${updateError.message}` };
 
     // 4. 플랫폼 연동 초기화
-    const { data: activePlats } = await supabase.from("platforms").select("*");
+    const activePlats = await getActivePlatforms();
     const platCodesToIds = new Map((activePlats || []).map((p: any) => [p.code, p.id]));
 
     // 기존 매핑 삭제
@@ -801,7 +801,10 @@ export async function saveSimplifiedProject(
     // 새 매핑 배치 삽입
     const platformInserts = data.platforms.map((code: string) => {
       const platformId = platCodesToIds.get(code);
-      if (!platformId) throw new Error(`지원하지 않는 플랫폼 코드: ${code}`);
+      if (!platformId) {
+        const availableCodes = Array.from(platCodesToIds.keys()).join(", ");
+        throw new Error(`지원하지 않는 플랫폼 코드: ${code} (DB 내 지원 코드: [${availableCodes || "없음"}])`);
+      }
 
       const defaults = PLATFORM_DEFAULTS[code as keyof typeof PLATFORM_DEFAULTS];
       return {
