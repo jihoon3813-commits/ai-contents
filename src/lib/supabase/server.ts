@@ -46,12 +46,16 @@ export async function createClient() {
       },
       global: {
         fetch: (url, options) => {
-          const fs = require("fs");
-          const path = require("path");
-          fs.appendFileSync(
-            path.join(process.cwd(), "server-debug.log"),
-            `[${new Date().toISOString()}] SERVER supabase fetch URL: ${url}\n`
-          );
+          try {
+            const fs = require("fs");
+            const path = require("path");
+            fs.appendFileSync(
+              path.join(process.cwd(), "server-debug.log"),
+              `[${new Date().toISOString()}] SERVER supabase fetch URL: ${url}\n`
+            );
+          } catch (err) {
+            // Vercel 등 read-only 환경에서 파일 쓰기 에러 무시
+          }
           return fetch(url, {
             ...options,
             cache: "no-store",
@@ -85,12 +89,16 @@ export function createAdminClient() {
       },
       global: {
         fetch: (url, options) => {
-          const fs = require("fs");
-          const path = require("path");
-          fs.appendFileSync(
-            path.join(process.cwd(), "server-debug.log"),
-            `[${new Date().toISOString()}] SERVER supabase admin fetch URL: ${url}\n`
-          );
+          try {
+            const fs = require("fs");
+            const path = require("path");
+            fs.appendFileSync(
+              path.join(process.cwd(), "server-debug.log"),
+              `[${new Date().toISOString()}] SERVER supabase admin fetch URL: ${url}\n`
+            );
+          } catch (err) {
+            // Vercel 등 read-only 환경에서 파일 쓰기 에러 무시
+          }
           return fetch(url, {
             ...options,
             cache: "no-store",

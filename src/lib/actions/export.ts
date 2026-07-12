@@ -14,6 +14,16 @@ import {
 } from "@/lib/utils/export-converters";
 import JSZip from "jszip";
 
+function safeLog(filename: string, message: string) {
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    fs.appendFileSync(path.join(process.cwd(), filename), message);
+  } catch (e) {
+    // Vercel 등 read-only 환경에서 파일 쓰기 에러 무시
+  }
+}
+
 // ==========================================
 // 1. 이미지 자산 업로드 (uploadAsset)
 // ==========================================
@@ -24,10 +34,8 @@ export async function uploadAsset(
   imagePlanId?: string
 ) {
   console.log(">>> SERVER uploadAsset start: contentId =", platformContentId);
-  const fs = require("fs");
-  const path = require("path");
-  fs.appendFileSync(
-    path.join(process.cwd(), "server-debug.log"),
+  safeLog(
+    "server-debug.log",
     `[${new Date().toISOString()}] SERVER uploadAsset start: contentId = ${platformContentId}\n`
   );
   try {
@@ -143,16 +151,14 @@ export async function uploadAsset(
     }
 
     revalidatePath(`/contents/${content.project_id}/platform/${platformContentId}/edit`);
-    fs.appendFileSync(
-      path.join(process.cwd(), "server-debug.log"),
+    safeLog(
+      "server-debug.log",
       `[${new Date().toISOString()}] SERVER uploadAsset success: assetId = ${asset.id}\n`
     );
     return asset;
   } catch (err: any) {
-    const fs = require("fs");
-    const path = require("path");
-    fs.appendFileSync(
-      path.join(process.cwd(), "server-error.log"),
+    safeLog(
+      "server-error.log",
       `[${new Date().toISOString()}] uploadAsset ERROR: ${err.message}\n${err.stack}\n\n`
     );
     throw err;
@@ -700,10 +706,8 @@ export async function generateSignedDownloadUrl(assetId: string) {
 // ==========================================
 export async function listAssets(platformContentId: string) {
   console.log(">>> SERVER listAssets called: contentId =", platformContentId);
-  const fs = require("fs");
-  const path = require("path");
-  fs.appendFileSync(
-    path.join(process.cwd(), "server-debug.log"),
+  safeLog(
+    "server-debug.log",
     `[${new Date().toISOString()}] SERVER listAssets start: contentId = ${platformContentId}\n`
   );
   const supabase = await createClient();
@@ -716,14 +720,14 @@ export async function listAssets(platformContentId: string) {
     .order("sort_order", { ascending: true });
 
   if (error) {
-    fs.appendFileSync(
-      path.join(process.cwd(), "server-debug.log"),
+    safeLog(
+      "server-debug.log",
       `[${new Date().toISOString()}] SERVER listAssets error: ${error.message}\n`
     );
     throw new Error(`자산 조회 실패: ${error.message}`);
   }
-  fs.appendFileSync(
-    path.join(process.cwd(), "server-debug.log"),
+  safeLog(
+    "server-debug.log",
     `[${new Date().toISOString()}] SERVER listAssets success: count = ${assetsList?.length || 0}\n`
   );
   return assetsList || [];
