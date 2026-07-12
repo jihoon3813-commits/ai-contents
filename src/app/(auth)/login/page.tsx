@@ -224,11 +224,17 @@ function LoginForm() {
         </div>
       </div>
 
-      <div className="mt-8 text-center">
+      <div className="mt-8 text-center space-y-2">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           아직 계정이 없으신가요?{" "}
           <Link href="/signup" className="font-semibold text-primary hover:underline">
             무료 회원가입
+          </Link>
+        </p>
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+          관리자이신가요?{" "}
+          <Link href="/admin" className="font-medium text-zinc-500 dark:text-zinc-400 hover:underline">
+            어드민 바로가기
           </Link>
         </p>
       </div>
