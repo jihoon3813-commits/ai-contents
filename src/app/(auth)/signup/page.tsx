@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { signupSchema, type SignupInput } from "@/lib/schemas/auth";
 import { useToast } from "@/components/ui/toast";
 import { Loader2, ArrowRight } from "lucide-react";
@@ -15,7 +15,7 @@ export default function SignupPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
   const toast = useToast();
-  const supabase = createClient();
+  const { signIn } = useAuthActions();
 
   const {
     register,
@@ -39,32 +39,23 @@ export default function SignupPage() {
     const loadingId = toast.loading("회원가입 처리 중...");
 
     try {
-      const { error } = await supabase.auth.signUp({
+      await signIn("password", {
         email: data.email,
         password: data.password,
-        options: {
-          data: {
-            name: data.name,
-          },
-          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
-        },
+        name: data.name,
+        flow: "signUp",
       });
 
       toast.dismiss(loadingId);
-
-      if (error) {
-        let message = error.message;
-        if (error.message.includes("User already registered")) {
-          message = "이미 등록된 이메일 주소입니다.";
-        }
-        toast.error(message);
-      } else {
-        toast.success("회원가입이 완료되었습니다. 이메일을 확인해 주세요!");
-        setIsSuccess(true);
-      }
-    } catch {
+      toast.success("회원가입이 완료되었습니다. 이메일을 확인해 주세요!");
+      setIsSuccess(true);
+    } catch (err: any) {
       toast.dismiss(loadingId);
-      toast.error("회원가입 처리 중 예상치 못한 오류가 발생했습니다.");
+      let message = err.message || "회원가입 처리 중 오류가 발생했습니다.";
+      if (message.includes("already registered") || message.includes("already exists")) {
+        message = "이미 등록된 이메일 주소입니다.";
+      }
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

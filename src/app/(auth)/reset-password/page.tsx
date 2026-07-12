@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/schemas/auth";
 import { useToast } from "@/components/ui/toast";
 import { Loader2 } from "lucide-react";
@@ -12,8 +12,9 @@ import { Loader2 } from "lucide-react";
 export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
-  const supabase = createClient();
+  const { signIn } = useAuthActions();
 
   const {
     register,
@@ -30,24 +31,22 @@ export default function ResetPasswordPage() {
   const onSubmit = async (data: ResetPasswordInput) => {
     setIsLoading(true);
     const loadingId = toast.loading("비밀번호 변경 중...");
+    const code = searchParams.get("code") || searchParams.get("token") || "";
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      await signIn("password", {
         password: data.password,
+        code,
+        flow: "reset-verification",
       });
 
       toast.dismiss(loadingId);
-
-      if (error) {
-        toast.error(`비밀번호 변경 실패: ${error.message}`);
-      } else {
-        toast.success("비밀번호가 성공적으로 변경되었습니다. 대시보드로 이동합니다.");
-        router.push("/dashboard");
-        router.refresh();
-      }
-    } catch {
+      toast.success("비밀번호가 성공적으로 변경되었습니다. 대시보드로 이동합니다.");
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err: any) {
       toast.dismiss(loadingId);
-      toast.error("비밀번호 변경 중 예상치 못한 오류가 발생했습니다.");
+      toast.error(`비밀번호 변경 실패: ${err.message || "알 수 없는 오류"}`);
     } finally {
       setIsLoading(false);
     }

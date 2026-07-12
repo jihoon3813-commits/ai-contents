@@ -1,7 +1,8 @@
 import React from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getAdminDashboardData } from "@/lib/actions/admin";
+import { fetchQuery } from "convex/nextjs";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
+import { api } from "../../../../convex/_generated/api";
 import AdminClient from "./AdminClient";
 
 export const metadata = {
@@ -10,25 +11,16 @@ export const metadata = {
 };
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
+  const token = await convexAuthNextjsToken();
 
-  // 1. 사용자 세션 획득
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!token) {
     redirect("/login");
   }
 
-  // 2. 어드민 여부 검증
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
+  // 1. 프로필 및 어드민 여부 검증
+  const profile = await fetchQuery(api.profiles.get, {}, { token });
 
-  if (error || !profile || !profile.is_admin) {
+  if (!profile || !profile.is_admin) {
     // 권한 없을 시 403 Forbidden 화면 출력
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] border border-dashed border-red-500/20 bg-red-500/5 rounded-3xl p-8 text-center space-y-3">
@@ -41,8 +33,8 @@ export default async function AdminDashboardPage() {
     );
   }
 
-  // 3. 어드민 종합 데이터 로딩
-  const initialData = await getAdminDashboardData();
+  // 2. 어드민 종합 데이터 로딩
+  const initialData = await fetchQuery(api.admin.getAdminDashboardData, {}, { token });
 
   return (
     <AdminClient initialData={initialData as any} />

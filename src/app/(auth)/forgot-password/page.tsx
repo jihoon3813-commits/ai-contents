@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/schemas/auth";
 import { useToast } from "@/components/ui/toast";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const toast = useToast();
-  const supabase = createClient();
+  const { signIn } = useAuthActions();
 
   const {
     register,
@@ -31,21 +31,17 @@ export default function ForgotPasswordPage() {
     const loadingId = toast.loading("비밀번호 재설정 링크 발송 중...");
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      await signIn("password", {
+        email: data.email,
+        flow: "reset",
       });
 
       toast.dismiss(loadingId);
-
-      if (error) {
-        toast.error(`링크 발송 실패: ${error.message}`);
-      } else {
-        toast.success("비밀번호 재설정 링크가 이메일로 발송되었습니다.");
-        setIsSuccess(true);
-      }
-    } catch {
+      toast.success("비밀번호 재설정 링크가 이메일로 발송되었습니다.");
+      setIsSuccess(true);
+    } catch (err: any) {
       toast.dismiss(loadingId);
-      toast.error("링크 발송 중 예상치 못한 오류가 발생했습니다.");
+      toast.error(`링크 발송 실패: ${err.message || "알 수 없는 오류"}`);
     } finally {
       setIsLoading(false);
     }

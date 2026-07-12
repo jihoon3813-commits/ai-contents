@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { loginSchema, type LoginInput } from "@/lib/schemas/auth";
 import { useToast } from "@/components/ui/toast";
 import { Loader2, ArrowRight } from "lucide-react";
@@ -15,7 +15,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
-  const supabase = createClient();
+  const { signIn } = useAuthActions();
 
   const nextParam = searchParams.get("next") ?? "/dashboard";
   const errorParam = searchParams.get("error");
@@ -43,29 +43,26 @@ function LoginForm() {
     const loadingId = toast.loading("로그인 중입니다...");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      await signIn("password", {
         email: data.email,
         password: data.password,
+        flow: "signIn",
       });
 
       toast.dismiss(loadingId);
-
-      if (error) {
-        let message = "이메일 또는 비밀번호를 확인해 주세요.";
-        if (error.message.includes("Invalid login credentials")) {
-          message = "이메일 또는 비밀번호가 일치하지 않습니다.";
-        } else if (error.message.includes("Email not confirmed")) {
-          message = "이메일 인증이 완료되지 않았습니다. 메일함을 확인해 주세요.";
-        }
-        toast.error(message);
-      } else {
-        toast.success("로그인에 성공했습니다. 대시보드로 이동합니다.");
-        router.push(nextParam);
-        router.refresh();
-      }
-    } catch {
+      toast.success("로그인에 성공했습니다. 대시보드로 이동합니다.");
+      router.push(nextParam);
+      router.refresh();
+    } catch (err: any) {
       toast.dismiss(loadingId);
-      toast.error("로그인 중 예상치 못한 오류가 발생했습니다.");
+      let message = "이메일 또는 비밀번호를 확인해 주세요.";
+      const errMsg = err.message || "";
+      if (errMsg.includes("Invalid password") || errMsg.includes("User not found")) {
+        message = "이메일 또는 비밀번호가 일치하지 않습니다.";
+      } else if (errMsg.includes("unverified")) {
+        message = "이메일 인증이 완료되지 않았습니다. 메일함을 확인해 주세요.";
+      }
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -76,23 +73,12 @@ function LoginForm() {
     const loadingId = toast.loading("Google 로그인 창을 여는 중...");
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(
-            nextParam
-          )}`,
-        },
+      await signIn("google", {
+        redirectTo: `${window.location.origin}/dashboard`,
       });
-
-      if (error) {
-        toast.dismiss(loadingId);
-        toast.error(`Google 로그인 실패: ${error.message}`);
-        setIsLoading(false);
-      }
-    } catch {
+    } catch (err: any) {
       toast.dismiss(loadingId);
-      toast.error("Google 로그인 중 예상치 못한 오류가 발생했습니다.");
+      toast.error(`Google 로그인 실패: ${err.message || "알 수 없는 오류"}`);
       setIsLoading(false);
     }
   };
