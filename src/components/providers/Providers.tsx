@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { ConvexAuthNextjsProvider } from "@convex-dev/auth/nextjs";
 import { ConvexReactClient } from "convex/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@/components/ui/toast";
@@ -23,10 +23,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ConvexAuthProvider client={convex}>
+    <ConvexAuthNextjsProvider client={convex}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
-    </ConvexAuthProvider>
+    </ConvexAuthNextjsProvider>
   );
 }
