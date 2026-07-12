@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
+import { useAuthActions } from "@convex-dev/auth/react";
 import {
   LayoutDashboard,
   User,
@@ -53,24 +54,32 @@ export default function DashboardLayoutClient({
   const toast = useToast();
   const supabase = createClient();
 
+  const { signOut } = useAuthActions();
   const userName = profile?.name || userEmail.split("@")[0];
   const activeWorkspace = workspaces[0] || { name: "워크스페이스 없음", slug: "" };
 
   const handleLogout = async () => {
     const loadingId = toast.loading("로그아웃 중...");
     try {
-      const { error } = await supabase.auth.signOut();
-      toast.dismiss(loadingId);
-      if (error) {
-        toast.error(`로그아웃 실패: ${error.message}`);
-      } else {
-        toast.success("로그아웃되었습니다.");
-        router.push("/login");
-        router.refresh();
+      // 1. Convex 로그아웃 실행
+      await signOut();
+
+      // 2. Supabase 로그아웃 안전하게 실행
+      try {
+        if (supabase && supabase.auth && typeof supabase.auth.signOut === "function") {
+          await supabase.auth.signOut();
+        }
+      } catch (sbErr) {
+        console.error("Supabase signOut error:", sbErr);
       }
-    } catch {
+
       toast.dismiss(loadingId);
-      toast.error("로그아웃 중 오류가 발생했습니다.");
+      toast.success("로그아웃되었습니다.");
+      router.push("/login");
+      router.refresh();
+    } catch (err: any) {
+      toast.dismiss(loadingId);
+      toast.error(`로그아웃 실패: ${err.message || "오류 발생"}`);
     }
   };
 
