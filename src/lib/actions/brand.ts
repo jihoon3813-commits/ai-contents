@@ -13,118 +13,120 @@ import { analyzeText } from "@/lib/utils/analyzer";
 
 // 헬퍼: 현재 로그인한 사용자의 워크스페이스 정보 및 권한 검증
 async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "ADMIN", "EDITOR"]) {
-  // 1. Convex Auth 인증 상태 우선 확인
+  let token: string | null = null;
   try {
     const { convexAuthNextjsToken } = await import("@convex-dev/auth/nextjs/server");
-    const token = await convexAuthNextjsToken();
-    if (token) {
-      const { fetchQuery } = await import("convex/nextjs");
-      const { api } = await import("../../../convex/_generated/api");
-      const profile = await fetchQuery(api.profiles.get, {}, { token });
-      if (profile) {
-        const workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
-        if (workspaces.length > 0) {
-          const activeWs = workspaces[0];
-          if (!requiredRoles.includes(activeWs.role)) {
-            throw new Error("해당 작업을 수행할 권한이 없습니다.");
-          }
+    token = await convexAuthNextjsToken();
+  } catch (err) {
+    console.warn("Failed to load convexAuthNextjsToken:", err);
+  }
 
-          const { createAdminClient } = await import("@/lib/supabase/server");
-          const adminSupabase = createAdminClient();
+  if (token) {
+    const { fetchQuery } = await import("convex/nextjs");
+    const { api } = await import("../../../convex/_generated/api");
+    const profile = await fetchQuery(api.profiles.get, {}, { token });
+    if (!profile) {
+      throw new Error("사용자 프로필 정보를 찾을 수 없습니다. (Convex)");
+    }
+    const workspaces = await fetchQuery(api.workspaces.getMyWorkspaces, {}, { token });
+    if (!workspaces || workspaces.length === 0) {
+      throw new Error("소속된 워크스페이스를 찾을 수 없습니다. 온보딩을 완료해 주세요.");
+    }
+    const activeWs = workspaces[0];
+    if (!requiredRoles.includes(activeWs.role)) {
+      throw new Error("해당 작업을 수행할 권한이 없습니다.");
+    }
 
-          // 1) Convex User Email을 조회하여 Supabase User UUID 획득 및 프로필 동기화
-          let email: string | null = null;
-          try {
-            const parts = token.split(".");
-            if (parts.length === 3) {
-              const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
-              email = payload.email || payload.email_verified || null;
-            }
-          } catch (jwtErr) {
-            console.error("Failed to decode Convex JWT:", jwtErr);
-          }
+    const { createAdminClient } = await import("@/lib/supabase/server");
+    const adminSupabase = createAdminClient();
 
-          if (!email) {
-            try {
-              email = await fetchQuery(api.profiles.getCurrentUserEmail, {}, { token });
-            } catch (convexErr) {
-              console.error("Failed to fetch email from Convex query:", convexErr);
-            }
-          }
+    // Convex User Email 조회
+    let email: string | null = null;
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+        email = payload.email || payload.email_verified || null;
+      }
+    } catch (jwtErr) {
+      console.error("Failed to decode Convex JWT:", jwtErr);
+    }
 
-          if (!email) {
-            throw new Error("사용자 이메일을 식별할 수 없습니다. Convex 함수가 동기화되지 않았거나 토큰이 유효하지 않습니다.");
-          }
-
-          const { data: listData } = await adminSupabase.auth.admin.listUsers();
-          const targetUser = (listData?.users || []).find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-          let supabaseUserId = targetUser?.id;
-
-          if (!supabaseUserId) {
-            // Supabase에 유저가 없을 경우 자동 생성
-            const { data: createdUser } = await adminSupabase.auth.admin.createUser({
-              email: email,
-              email_confirm: true,
-              user_metadata: { name: profile.name || "사용자" }
-            });
-            supabaseUserId = createdUser?.user?.id;
-          }
-
-          if (!supabaseUserId) {
-            throw new Error("Supabase 사용자 동기화 실패");
-          }
-
-          // Supabase public.profiles 레코드 존재 보장
-          const { data: supabaseProfile } = await adminSupabase
-            .from("profiles")
-            .select("id")
-            .eq("id", supabaseUserId)
-            .maybeSingle();
-
-          if (!supabaseProfile) {
-            await adminSupabase.from("profiles").insert({
-              id: supabaseUserId,
-              name: profile.name || "사용자",
-              avatar_url: profile.avatar_url,
-              timezone: profile.timezone || "Asia/Seoul",
-              language: profile.language || "ko",
-              onboarding_completed: true,
-              is_admin: profile.is_admin || false,
-            });
-          }
-
-          // 2) Convex Workspace Slug를 기준으로 Supabase Workspace UUID 조회 및 자동 생성 동기화
-          const { data: supabaseWs } = await adminSupabase
-            .from("workspaces")
-            .select("id")
-            .eq("slug", activeWs.slug)
-            .maybeSingle();
-
-          let supabaseWorkspaceId = supabaseWs?.id;
-          if (!supabaseWorkspaceId) {
-            const { data: newWs } = await adminSupabase
-              .from("workspaces")
-              .insert({
-                name: activeWs.name,
-                slug: activeWs.slug,
-                plan_code: activeWs.plan_code || "FREE",
-                status: "ACTIVE",
-              })
-              .select("id")
-              .single();
-            supabaseWorkspaceId = newWs?.id;
-          }
-
-          if (!supabaseWorkspaceId) {
-            throw new Error("Supabase 워크스페이스 동기화 실패");
-          }
-
-          return { userId: supabaseUserId, workspaceId: supabaseWorkspaceId, userRole: activeWs.role };
-        }
+    if (!email) {
+      try {
+        email = await fetchQuery(api.profiles.getCurrentUserEmail, {}, { token });
+      } catch (convexErr) {
+        console.error("Failed to fetch email from Convex query:", convexErr);
       }
     }
-  } catch (convexAuthErr) {
-    console.error("verifyWorkspaceMembership Convex Auth Error:", convexAuthErr);
+
+    if (!email) {
+      throw new Error("사용자 이메일을 식별할 수 없습니다.");
+    }
+
+    const { data: listData } = await adminSupabase.auth.admin.listUsers();
+    const targetUser = (listData?.users || []).find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    let supabaseUserId = targetUser?.id;
+
+    if (!supabaseUserId) {
+      const { data: createdUser } = await adminSupabase.auth.admin.createUser({
+        email: email,
+        email_confirm: true,
+        user_metadata: { name: profile.name || "사용자" }
+      });
+      supabaseUserId = createdUser?.user?.id;
+    }
+
+    if (!supabaseUserId) {
+      throw new Error("Supabase 사용자 동기화 실패");
+    }
+
+    // Profiles 레코드 보장
+    const { data: supabaseProfile } = await adminSupabase
+      .from("profiles")
+      .select("id")
+      .eq("id", supabaseUserId)
+      .maybeSingle();
+
+    if (!supabaseProfile) {
+      await adminSupabase.from("profiles").insert({
+        id: supabaseUserId,
+        name: profile.name || "사용자",
+        avatar_url: profile.avatar_url,
+        timezone: profile.timezone || "Asia/Seoul",
+        language: profile.language || "ko",
+        onboarding_completed: true,
+        is_admin: profile.is_admin || false,
+      });
+    }
+
+    // Workspaces 레코드 보장
+    const { data: supabaseWs } = await adminSupabase
+      .from("workspaces")
+      .select("id")
+      .eq("slug", activeWs.slug)
+      .maybeSingle();
+
+    let supabaseWorkspaceId = supabaseWs?.id;
+    if (!supabaseWorkspaceId) {
+      const { data: newWs } = await adminSupabase
+        .from("workspaces")
+        .insert({
+          name: activeWs.name,
+          slug: activeWs.slug,
+          plan_code: activeWs.plan_code || "FREE",
+          status: "ACTIVE",
+        })
+        .select("id")
+        .single();
+      supabaseWorkspaceId = newWs?.id;
+    }
+
+    if (!supabaseWorkspaceId) {
+      throw new Error("Supabase 워크스페이스 동기화 실패");
+    }
+
+    return { userId: supabaseUserId, workspaceId: supabaseWorkspaceId, userRole: activeWs.role };
   }
 
   // 2. Convex Auth 토큰이 없을 때만 기존 Supabase Auth 조회
@@ -151,7 +153,6 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
       const adminSupabase = createAdminClient();
       const userName = user.user_metadata?.name || user.email?.split("@")[0] || "사용자";
       
-      // 1) 프로필 확인 및 생성
       const { data: profile } = await adminSupabase
         .from("profiles")
         .select("id")
@@ -169,7 +170,6 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
         });
       }
 
-      // 2) 워크스페이스 생성 및 ID 조회
       const slug = `ws-${user.id.slice(0, 8)}-${Math.random().toString(36).substring(2, 6)}`;
       const { data: newWs, error: wsError } = await adminSupabase
         .from("workspaces")
@@ -180,6 +180,8 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
           plan_code: "FREE",
           status: "ACTIVE",
           settings: {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .select("id")
         .single();
@@ -188,40 +190,36 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
         throw new Error(wsError?.message || "워크스페이스 생성 실패");
       }
 
-      // 3) 워크스페이스 멤버 추가
-      await adminSupabase.from("workspace_members").insert({
-        workspace_id: newWs.id,
-        user_id: user.id,
-        role: "OWNER",
-        status: "ACTIVE",
-      });
+      const { data: newMember, error: memError } = await adminSupabase
+        .from("workspace_members")
+        .insert({
+          workspace_id: newWs.id,
+          user_id: user.id,
+          role: "OWNER",
+          status: "ACTIVE",
+        })
+        .select()
+        .single();
 
-      // 4) 구독 추가
+      if (memError || !newMember) {
+        throw new Error(memError?.message || "멤버십 설정 실패");
+      }
+
       await adminSupabase.from("subscriptions").insert({
         workspace_id: newWs.id,
         plan_code: "FREE",
         status: "ACTIVE",
         current_period_start: new Date().toISOString(),
         current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        limits: { words_limit: 10000, images_limit: 20 },
+        limits: { monthly_credits: 50, used_credits: 0 },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
 
-      // 다시 한 번 멤버 조회
-      const retryResult = await supabase
-        .from("workspace_members")
-        .select("workspace_id, role")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (retryResult.data) {
-        member = retryResult.data;
-      } else {
-        throw new Error("워크스페이스 멤버십 재로드 실패");
-      }
+      member = { workspace_id: newWs.id, role: "OWNER" };
     } catch (createErr: any) {
       console.error("verifyWorkspaceMembership Auto-Create Error:", createErr);
-      throw new Error("워크스페이스 멤버십이 존재하지 않으며, 자동 생성에 실패했습니다.");
+      throw new Error(`워크스페이스 생성 중 오류: ${createErr.message}`);
     }
   }
 
