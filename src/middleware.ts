@@ -19,11 +19,12 @@ const isProtectedRoute = createRouteMatcher([
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const isAuthenticated = await convexAuth.isAuthenticated();
   const allCookies = request.cookies.getAll().map(c => c.name);
-  console.log(`[Middleware] Path: ${request.nextUrl.pathname}, Auth: ${isAuthenticated}, Cookies: ${allCookies.join(", ")}`);
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "undefined";
+  const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || "undefined";
+  console.log(`[Middleware] Path: ${request.nextUrl.pathname}, Auth: ${isAuthenticated}, Cookies: ${allCookies.join(", ")}, URL: ${convexUrl}, SiteURL: ${convexSiteUrl}`);
   
   if (isProtectedRoute(request) && !isAuthenticated) {
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || "undefined";
-    return nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}&convexUrl=${encodeURIComponent(convexUrl)}`);
+    return nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}&convexUrl=${encodeURIComponent(convexUrl)}&convexSiteUrl=${encodeURIComponent(convexSiteUrl)}`);
   }
   
   if (isSignInPage(request) && isAuthenticated) {
