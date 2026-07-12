@@ -29,10 +29,15 @@ export default async function BriefPage({ params }: BriefPageProps) {
     .eq("project_id", projectId)
     .maybeSingle();
 
+  const mergedBrief = brief ? {
+    ...brief,
+    target_audience: project.target_audience
+  } : null;
+
   return (
     <BriefClient
       project={project}
-      initialBrief={brief || null}
+      initialBrief={mergedBrief}
     />
   );
 }

@@ -284,7 +284,6 @@ export async function generateBrief(projectId: string) {
     .from("content_briefs")
     .upsert({
       project_id: projectId,
-      target_audience: aiBrief.targetAudience,
       search_intent: aiBrief.searchIntent,
       audience_problem: aiBrief.audienceProblem,
       core_answer: aiBrief.coreAnswer,
@@ -302,6 +301,12 @@ export async function generateBrief(projectId: string) {
 
   if (error) throw new Error(`브리프 저장 실패: ${error.message}`);
 
+  // 프로젝트 테이블의 target_audience 컬럼 업데이트
+  await supabase
+    .from("content_projects")
+    .update({ target_audience: aiBrief.targetAudience })
+    .eq("id", projectId);
+
   // AI Jobs 로그 기록
   await supabase.from("ai_jobs").insert({
     workspace_id: workspaceId,
@@ -315,7 +320,10 @@ export async function generateBrief(projectId: string) {
   });
 
   revalidatePath(`/contents/${projectId}/brief`);
-  return brief;
+  return {
+    ...brief,
+    target_audience: aiBrief.targetAudience,
+  };
 }
 
 export async function approveBrief(projectId: string) {
