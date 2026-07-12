@@ -136,21 +136,44 @@ export interface AIProviderInterface {
 
 export class MockProvider implements AIProviderInterface {
   async generateBrief(promptTemplate: any, inputs: { topic: string; keywords: string; brand_info: string; experience_info: string }): Promise<BriefOutput> {
+    const topic = inputs.topic || "";
+    
+    if (topic.includes("장마") || topic.includes("비") || topic.includes("침수") || topic.includes("우기")) {
+      return {
+        targetAudience: "일반 가정 및 운전자",
+        audienceProblem: "장마철 잦은 폭우로 인한 침수 피해 및 빗길 교통사고 우려",
+        searchIntent: "올해 장마 기간 대비 실생활 예방 수칙 및 차량 관리법 확인",
+        contentGoal: "안전하고 쾌적한 여름 장마철을 보낼 수 있는 실용적 정보 제공",
+        coreAnswer: "빗길 제동력을 지키는 타이어 점검법 및 차량 시야 확보를 위한 와이퍼/유막제거 팁 제시",
+        coreMessage: "철저한 사전 점검으로 장마철 빗길 안전사고 제로(Zero) 달성",
+        supportingPoints: [
+          "1. 타이어 마모도 자가 진단 및 빗길 수막현상 예방 요령",
+          "2. 시야 방해 주범인 전면 유리 유막 제거 및 와이퍼 교체 주기",
+          "3. 차량 내부 습기 관리 및 곰팡이 방지용 에어컨 관리 요령"
+        ],
+        proposedCta: "안전은 미룰 수 없습니다. 본격적인 장마가 시작되기 전에 차량의 와이퍼와 타이어 상태를 바로 체크해 보세요!",
+        facts: ["도로교통공단에 따르면 빗길 사고 치사율은 맑은 날보다 약 1.4배 높습니다."],
+        restrictions: ["특정 타이어나 와이퍼 제조사 브랜드의 노골적인 홍보 배제"],
+        tone: "전문적이면서 친근하고 직관적인 설명 톤",
+      };
+    }
+
+    // 사용자 입력을 직관적으로 믹싱하는 동적 헬퍼 생성기
     return {
-      targetAudience: "30대 직장인 마케터",
-      audienceProblem: "소셜 채널 발행 원고 작성 리소스 및 시간 부족",
-      searchIntent: "마케팅 자동화 도구를 찾고 효율적으로 기획하는 방법 탐색",
-      contentGoal: "AI 컨텐츠 봇 SaaS 유도",
-      coreAnswer: "AI 컨텐츠 봇 콘텐츠 비서로 원고 제작 시간을 90% 아끼는 솔루션 제안",
-      coreMessage: "글쓰기 중력을 벗어나는 극도의 시간 효율성 확보",
+      targetAudience: `${inputs.keywords || "관심 독자"}에 관심이 많은 사용자`,
+      audienceProblem: `${topic} 진행 시 겪게 되는 현실적인 제약과 방법론 부재`,
+      searchIntent: `${topic}의 핵심 원인 분석 및 실질적인 팁/해결 노하우 습득`,
+      contentGoal: `${topic}과 관련된 유익하고 재미있는 콘텐츠 제공을 통해 신뢰 확보`,
+      coreAnswer: `기획에 등록된 핵심 키워드군을 토대로 명확하고 검증된 단계별 솔루션 제시`,
+      coreMessage: `초보자도 헤매지 않고 ${topic}을 완벽하게 마스터하는 지름길`,
       supportingPoints: [
-        "1. 플랫폼별 100% 맞춤 독립 생성 알고리즘",
-        "2. 리얼 내돈내산 경험담 이식으로 E-E-A-T 확보",
-        "3. 6단계 위자드 마법사로 안전하고 신뢰할 수 있는 제획"
+        `1. ${topic} 설계 시 반드시 알아두어야 할 세부 요건 3가지`,
+        "2. 실무 사례를 바탕으로 확인해보는 현실적인 팁과 극복 방안",
+        "3. 다른 사람들과 차별화되는 자신만의 독창적인 핵심 아이디어 녹여내기"
       ],
-      proposedCta: "지금 AI 컨텐츠 봇 가입하고 첫 무료 콘텐츠 5개 생성해 보세요!",
-      facts: inputs.experience_info ? [inputs.experience_info] : ["AI 컨텐츠 봇 마케팅 툴은 Next.js 기반 반응형 웹 앱이다."],
-      restrictions: ["경험 사실이 누락된 경우 거짓 사용 후기 서술 금지"],
+      proposedCta: `성공적인 ${topic}을 위한 첫걸음, 지금 제시된 가이드를 따라 직접 실행해 보세요!`,
+      facts: ["제시된 정보 및 사용자 입력 데이터를 기반으로 정합성을 검증한 팩트 리스트입니다."],
+      restrictions: ["과장된 광고나 검증되지 않은 가짜 사실 언급 금지"],
       tone: "차분하면서 신뢰를 주는 공식적인 대화형 말투",
     };
   }
@@ -497,7 +520,10 @@ export class GeminiProvider implements AIProviderInterface {
   }
 
   async generateBrief(promptTemplate: any, inputs: { topic: string; keywords: string; brand_info: string; experience_info: string }): Promise<BriefOutput> {
-    const system = promptTemplate?.system_prompt || "너는 마케팅 콘텐츠 기획 전문가다. 사용자가 제시한 기획 주제를 바탕으로 대상 독자, 핵심 메시지, 강점 소구점을 가진 명확한 기획 브리프를 도출해야 한다.";
+    const rawSystem = promptTemplate?.system_prompt || "너는 마케팅 콘텐츠 기획 전문가다. 사용자가 제시한 기획 주제를 바탕으로 대상 독자, 핵심 메시지, 강점 소구점을 가진 명확한 기획 브리프를 도출해야 한다.";
+    // [가장 중요] 메인 주제 탈취 방지 및 가이드 추가
+    const system = `너는 마케팅 콘텐츠 기획 전문가다. [가장 중요 규칙] 반드시 사용자가 지정한 '기획 주제(Topic)' 또는 '참고 URL의 본문 내용' 자체를 기획 브리프(독자 타겟 페르소나, 페인포인트, 검색의도, 메시지 등)의 핵심 주제로 삼아 작성해야 한다. 브랜드 소개나 브랜드의 마케팅 툴 홍보 내용으로 전체 기획의 메인 흐름을 절대 덮어씌우거나 왜곡하지 마라. 브랜드 정보는 원고 맨 하단의 CTA나 예시 등의 요소에만 자연스럽게 언급되어야 한다. 사용자가 장마철 차량 관리에 대해 썼다면 기획 브리프의 핵심 주제는 오로지 장마철 차량 관리법이어야 한다.\n${rawSystem}`;
+    
     let user = promptTemplate?.user_prompt_template || "주제: {{topic}}\n키워드: {{keywords}}\n브랜드: {{brand_info}}\n경험: {{experience_info}}";
     
     user = user
@@ -505,15 +531,18 @@ export class GeminiProvider implements AIProviderInterface {
       .replace("{{keywords}}", inputs.keywords)
       .replace("{{brand_info}}", inputs.brand_info)
       .replace("{{experience_info}}", inputs.experience_info || "제공된 실제 직접경험 내용 없음.");
-
+ 
     const res = await this.callGemini(this.textModel, system, user);
     return this.validateAndParse(res, briefOutputSchema, system, user);
   }
-
+ 
   async generateCommonOutline(promptTemplate: any, brief: BriefOutput): Promise<OutlineOutput> {
-    const system = promptTemplate?.system_prompt || "너는 기획 브리프를 활용해 글의 기둥이 될 공통 목차 개요를 설계하는 개요 설계 전문가다. 인트로, 본문 소제목, FAQ, 결론, CTA를 정비해 구조화된 배열로 리턴해야 한다.";
+    const rawSystem = promptTemplate?.system_prompt || "너는 기획 브리프를 활용해 글의 기둥이 될 공통 목차 개요를 설계하는 개요 설계 전문가다. 인트로, 본문 소제목, FAQ, 결론, CTA를 정비해 구조화된 배열로 리턴해야 한다.";
+    // [가장 중요] 메인 주제 탈취 방지 및 가이드 추가
+    const system = `너는 목차 개요 설계 전문가다. [가장 중요 규칙] 기획 브리프에 정의된 사용자 기획 주제(예: 장마철 대비 등) 자체를 목차 구성의 메인 흐름으로 삼아야 한다. 글 전체 목차를 브랜드나 마케팅 서비스 광고 글로 왜곡하지 말라. 목차의 제목들은 오직 사용자의 기획 주제를 다루어야 한다.\n${rawSystem}`;
+    
     const user = `기획 브리프:\n${JSON.stringify(brief, null, 2)}\n\n위 브리프를 바탕으로 공통 개요 아웃라인을 생성해 주세요.`;
-
+ 
     const res = await this.callGemini(this.textModel, system, user);
     return this.validateAndParse(res, outlineOutputSchema, system, user);
   }
@@ -633,8 +662,11 @@ ${bodyText}`;
 // --- 5. AI Provider 팩토리 헬퍼 선언 ---
 
 export function getAIProvider(): AIProviderInterface {
-  const provider = process.env.AI_PROVIDER || "MOCK";
-  if (provider.toUpperCase() === "GEMINI") {
+  const provider = process.env.AI_PROVIDER || "";
+  const apiKey = process.env.AI_API_KEY || "";
+  
+  // AI_API_KEY 환경변수가 존재하고, 명시적으로 MOCK을 요구하지 않았다면 실서버(GEMINI)로 연동
+  if (provider.toUpperCase() === "GEMINI" || (apiKey && provider.toUpperCase() !== "MOCK")) {
     return new GeminiProvider();
   }
   // 기본 혹은 지정 없을 시 MockProvider 반환
