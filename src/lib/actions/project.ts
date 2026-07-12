@@ -244,12 +244,26 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
 export async function getActivePlatforms() {
   await verifyWorkspaceMembership(["OWNER", "ADMIN", "EDITOR", "VIEWER"]);
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("platforms")
     .select("*")
     .eq("is_active", true);
 
   if (error) throw new Error(error.message);
+
+  if (!data || data.length === 0) {
+    const { seedPlatforms } = await import("@/lib/supabase/prompt_seeder");
+    await seedPlatforms();
+
+    const { data: reselect, error: reselectError } = await supabase
+      .from("platforms")
+      .select("*")
+      .eq("is_active", true);
+
+    if (reselectError) throw new Error(reselectError.message);
+    return reselect || [];
+  }
+
   return data;
 }
 

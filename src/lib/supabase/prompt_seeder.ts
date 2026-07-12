@@ -148,3 +148,106 @@ export async function getPromptTemplate(key: string) {
 
   return data;
 }
+
+const DEFAULT_PLATFORMS = [
+  {
+    code: "WORDPRESS",
+    name: "WordPress",
+    category: "CMS",
+    supports_api_publish: true,
+    supports_draft_publish: true,
+    is_active: true,
+    default_rules: {
+      default_outline: true,
+      default_faq_limit: 3,
+      default_char_limit: 2500,
+      default_image_limit: 5
+    }
+  },
+  {
+    code: "BLOGGER",
+    name: "Blogger",
+    category: "CMS",
+    supports_api_publish: true,
+    supports_draft_publish: true,
+    is_active: true,
+    default_rules: {
+      default_outline: false,
+      default_faq_limit: 2,
+      default_char_limit: 2200,
+      default_image_limit: 5
+    }
+  },
+  {
+    code: "TISTORY",
+    name: "티스토리",
+    category: "CMS",
+    supports_api_publish: true,
+    supports_draft_publish: true,
+    is_active: true,
+    default_rules: {
+      default_outline: false,
+      default_faq_limit: 0,
+      default_char_limit: 2200,
+      default_image_limit: 6
+    }
+  },
+  {
+    code: "NAVER_BLOG",
+    name: "네이버 블로그",
+    category: "BLOG",
+    supports_api_publish: false,
+    supports_draft_publish: false,
+    is_active: true,
+    default_rules: {
+      default_outline: false,
+      default_faq_limit: 0,
+      default_char_limit: 2000,
+      default_image_limit: 8
+    }
+  },
+  {
+    code: "INSTAGRAM",
+    name: "인스타그램",
+    category: "SOCIAL",
+    supports_api_publish: false,
+    supports_draft_publish: false,
+    is_active: true,
+    default_rules: {
+      default_outline: false,
+      default_char_limit: 800,
+      default_image_limit: 8,
+      default_hashtag_limit: 10
+    }
+  }
+];
+
+export async function seedPlatforms() {
+  const supabase = await createClient();
+
+  const { data: existing, error: checkError } = await supabase
+    .from("platforms")
+    .select("code");
+
+  if (checkError) {
+    console.error("플랫폼 목록 존재 여부 확인 실패:", checkError.message);
+    return;
+  }
+
+  const existingCodes = new Set((existing || []).map((p) => p.code));
+  const toInsert = DEFAULT_PLATFORMS.filter((p) => !existingCodes.has(p.code));
+
+  if (toInsert.length === 0) {
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from("platforms")
+    .insert(toInsert);
+
+  if (insertError) {
+    console.error("플랫폼 목록 시딩 실패:", insertError.message);
+  } else {
+    console.log(`플랫폼 목록 시딩 성공! (${toInsert.length}개 추가됨)`);
+  }
+}
