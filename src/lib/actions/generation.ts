@@ -96,90 +96,99 @@ export async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNE
     const { createAdminClient } = await import("@/lib/supabase/server");
     const adminSupabase = createAdminClient();
 
-    // Convex User Email 조회
-    let email: string | null = null;
-    try {
-      const parts = token.split(".");
-      if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
-        email = payload.email || payload.email_verified || null;
-      }
-    } catch (jwtErr) {
-      console.error("Failed to decode Convex JWT:", jwtErr);
-    }
+    let supabaseUserId = profile.userId || "convex-" + profile._id;
+    let supabaseWorkspaceId = activeWs.id || "convex-" + activeWs._id;
 
-    if (!email) {
+    const isSupabaseConfigured = process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+    if (isSupabaseConfigured) {
       try {
-        email = await fetchQuery(api.profiles.getCurrentUserEmail, {}, { token });
-      } catch (convexErr) {
-        console.error("Failed to fetch email from Convex query:", convexErr);
+        // Convex User Email 조회
+        let email: string | null = null;
+        try {
+          const parts = token.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+            email = payload.email || payload.email_verified || null;
+          }
+        } catch (jwtErr) {
+          console.error("Failed to decode Convex JWT:", jwtErr);
+        }
+
+        if (!email) {
+          try {
+            email = await fetchQuery(api.profiles.getCurrentUserEmail, {}, { token });
+          } catch (convexErr) {
+            console.error("Failed to fetch email from Convex query:", convexErr);
+          }
+        }
+
+        if (email) {
+          const { data: listData } = await adminSupabase.auth.admin.listUsers();
+          const targetUser = (listData?.users || []).find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+          let syncUserId = targetUser?.id;
+
+          if (!syncUserId) {
+            const { data: createdUser } = await adminSupabase.auth.admin.createUser({
+              email: email,
+              email_confirm: true,
+              user_metadata: { name: profile.name || "사용자" }
+            });
+            syncUserId = createdUser?.user?.id;
+          }
+
+          if (syncUserId) {
+            supabaseUserId = syncUserId;
+
+            // Profiles 레코드 보장
+            const { data: supabaseProfile } = await adminSupabase
+              .from("profiles")
+              .select("id")
+              .eq("id", supabaseUserId)
+              .maybeSingle();
+
+            if (!supabaseProfile) {
+              await adminSupabase.from("profiles").insert({
+                id: supabaseUserId,
+                name: profile.name || "사용자",
+                avatar_url: profile.avatar_url,
+                timezone: profile.timezone || "Asia/Seoul",
+                language: profile.language || "ko",
+                onboarding_completed: true,
+                is_admin: profile.is_admin || false,
+              });
+            }
+
+            // Workspaces 레코드 보장
+            const { data: supabaseWs } = await adminSupabase
+              .from("workspaces")
+              .select("id")
+              .eq("slug", activeWs.slug)
+              .maybeSingle();
+
+            let syncWorkspaceId = supabaseWs?.id;
+            if (!syncWorkspaceId) {
+              const { data: newWs } = await adminSupabase
+                .from("workspaces")
+                .insert({
+                  name: activeWs.name,
+                  slug: activeWs.slug,
+                  plan_code: activeWs.plan_code || "FREE",
+                  status: "ACTIVE",
+                })
+                .select("id")
+                .single();
+              syncWorkspaceId = newWs?.id;
+            }
+
+            if (syncWorkspaceId) {
+              supabaseWorkspaceId = syncWorkspaceId;
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.error("Supabase sync failed (gracefully skipped):", syncErr);
       }
-    }
-
-    if (!email) {
-      throw new Error("사용자 이메일을 식별할 수 없습니다.");
-    }
-
-    const { data: listData } = await adminSupabase.auth.admin.listUsers();
-    const targetUser = (listData?.users || []).find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-    let supabaseUserId = targetUser?.id;
-
-    if (!supabaseUserId) {
-      const { data: createdUser } = await adminSupabase.auth.admin.createUser({
-        email: email,
-        email_confirm: true,
-        user_metadata: { name: profile.name || "사용자" }
-      });
-      supabaseUserId = createdUser?.user?.id;
-    }
-
-    if (!supabaseUserId) {
-      throw new Error("Supabase 사용자 동기화 실패");
-    }
-
-    // Profiles 레코드 보장
-    const { data: supabaseProfile } = await adminSupabase
-      .from("profiles")
-      .select("id")
-      .eq("id", supabaseUserId)
-      .maybeSingle();
-
-    if (!supabaseProfile) {
-      await adminSupabase.from("profiles").insert({
-        id: supabaseUserId,
-        name: profile.name || "사용자",
-        avatar_url: profile.avatar_url,
-        timezone: profile.timezone || "Asia/Seoul",
-        language: profile.language || "ko",
-        onboarding_completed: true,
-        is_admin: profile.is_admin || false,
-      });
-    }
-
-    // Workspaces 레코드 보장
-    const { data: supabaseWs } = await adminSupabase
-      .from("workspaces")
-      .select("id")
-      .eq("slug", activeWs.slug)
-      .maybeSingle();
-
-    let supabaseWorkspaceId = supabaseWs?.id;
-    if (!supabaseWorkspaceId) {
-      const { data: newWs } = await adminSupabase
-        .from("workspaces")
-        .insert({
-          name: activeWs.name,
-          slug: activeWs.slug,
-          plan_code: activeWs.plan_code || "FREE",
-          status: "ACTIVE",
-        })
-        .select("id")
-        .single();
-      supabaseWorkspaceId = newWs?.id;
-    }
-
-    if (!supabaseWorkspaceId) {
-      throw new Error("Supabase 워크스페이스 동기화 실패");
     }
 
     return { userId: supabaseUserId, workspaceId: supabaseWorkspaceId, userRole: activeWs.role };
