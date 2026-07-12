@@ -18,9 +18,11 @@ const isProtectedRoute = createRouteMatcher([
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const isAuthenticated = await convexAuth.isAuthenticated();
+  const allCookies = request.cookies.getAll().map(c => c.name);
+  console.log(`[Middleware] Path: ${request.nextUrl.pathname}, Auth: ${isAuthenticated}, Cookies: ${allCookies.join(", ")}`);
   
   if (isProtectedRoute(request) && !isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, "/login?error=middleware_unauthenticated");
+    return nextjsMiddlewareRedirect(request, `/login?error=middleware_unauthenticated&cookies=${encodeURIComponent(allCookies.join(","))}`);
   }
   
   if (isSignInPage(request) && isAuthenticated) {

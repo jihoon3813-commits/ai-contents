@@ -26,7 +26,8 @@ function LoginForm() {
         toast.error("인증에 실패하였습니다. 다시 시도해 주세요.");
       } else {
         const msg = searchParams.get("msg");
-        toast.error(`로그인 해제 또는 실패 (${errorParam}): ${msg || "상세 정보 없음"}`);
+        const cookiesParam = searchParams.get("cookies");
+        toast.error(`로그인 해제 또는 실패 (${errorParam}): ${msg || "상세 정보 없음"} (쿠키목록: ${cookiesParam || "없음"})`);
       }
     }
   }, [errorParam, searchParams, toast]);
