@@ -29,7 +29,36 @@ async function verifyWorkspaceMembership(requiredRoles: string[] = ["OWNER", "AD
           if (!requiredRoles.includes(activeWs.role)) {
             throw new Error("해당 작업을 수행할 권한이 없습니다.");
           }
-          return { userId: profile.userId, workspaceId: activeWs.id, userRole: activeWs.role };
+
+          // Convex Workspace Slug를 기준으로 Supabase Workspace UUID 조회 및 자동 생성 동기화
+          const { createAdminClient } = await import("@/lib/supabase/server");
+          const adminSupabase = createAdminClient();
+          const { data: supabaseWs } = await adminSupabase
+            .from("workspaces")
+            .select("id")
+            .eq("slug", activeWs.slug)
+            .maybeSingle();
+
+          let supabaseWorkspaceId = supabaseWs?.id;
+          if (!supabaseWorkspaceId) {
+            const { data: newWs } = await adminSupabase
+              .from("workspaces")
+              .insert({
+                name: activeWs.name,
+                slug: activeWs.slug,
+                plan_code: activeWs.plan_code || "FREE",
+                status: "ACTIVE",
+              })
+              .select("id")
+              .single();
+            supabaseWorkspaceId = newWs?.id;
+          }
+
+          if (!supabaseWorkspaceId) {
+            throw new Error("Supabase 워크스페이스 동기화 실패");
+          }
+
+          return { userId: profile.userId, workspaceId: supabaseWorkspaceId, userRole: activeWs.role };
         }
       }
     }
