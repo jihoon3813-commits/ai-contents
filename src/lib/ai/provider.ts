@@ -130,6 +130,7 @@ export interface AIProviderInterface {
   evaluateBasicQuality(bodyText: string): Promise<QualityOutput>;
   evaluateContent(promptTemplate: any, bodyText: string, title: string, platformCode: string, briefContext: string): Promise<EvaluationOutput>;
   autoFixContent(bodyText: string, title: string, issue: any, platformCode: string): Promise<AutoFixOutput>;
+  generateTitleSuggestions(seedKeyword: string): Promise<string[]>;
 }
 
 // --- 3. MockProvider 클래스 구현 ---
@@ -428,6 +429,26 @@ export class MockProvider implements AIProviderInterface {
       updatedFields
     };
   }
+
+  async generateTitleSuggestions(seedKeyword: string): Promise<string[]> {
+    const seed = seedKeyword.trim();
+    if (seed.includes("장마") || seed.includes("비") || seed.includes("침수") || seed.includes("우기")) {
+      return [
+        `올해 장마철 완벽 대비를 위한 핵심 체크리스트 TOP 5`,
+        `빗길 운전 필수 안전 수칙과 사고 예방 차량 관리법`,
+        `여름 장마 기간 습기 및 곰팡이 퇴치하는 초간단 꿀팁`,
+        `장마철 침수 피해 방지용 가정 내 예방 대책 가이드`,
+        `쾌적한 여름을 위한 장마철 유용한 살림 가이드`,
+      ];
+    }
+    return [
+      `모르면 평생 후회하는 '${seed}' 핵심 요약 가이드`,
+      `요즘 주목받는 '${seed}' 관련 실용적인 대처법`,
+      `초보자도 쉽게 따라하는 '${seed}' 단계별 꿀팁`,
+      `성공적인 '${seed}' 관리를 위한 필수 추천템`,
+      `바쁜 현대인을 위한 '${seed}' 효율적인 해결 방안`,
+    ];
+  }
 }
 
 // --- 4. GeminiProvider 클래스 구현 (Raw fetch API 기반) ---
@@ -656,6 +677,32 @@ ${bodyText}`;
 
     const res = await this.callGemini(this.fastModel, system, user);
     return this.validateAndParse(res, autoFixOutputSchema, system, user);
+  }
+
+  async generateTitleSuggestions(seedKeyword: string): Promise<string[]> {
+    const system = `너는 블로그, 인스타그램 등 SNS 마케팅 콘텐츠 기획 전문가다. 사용자가 입력한 핵심 씨앗 키워드(Seed Keyword)를 기반으로, 클릭을 유도하고 실용적이고 매력적이며 어색하지 않은 고품질의 기획 타이틀 후보 5개를 JSON 객체 형태로 출력해야 한다.
+반드시 아래의 스키마 형식의 JSON만 반환하라.
+{
+  "suggestions": ["제목 1", "제목 2", "제목 3", "제목 4", "제목 5"]
+}`;
+    const user = `씨앗 키워드: ${seedKeyword}`;
+    try {
+      const res = await this.callGemini(this.fastModel, system, user);
+      const parsed = JSON.parse(res);
+      if (parsed && Array.isArray(parsed.suggestions)) {
+        return parsed.suggestions;
+      }
+    } catch (err) {
+      console.error("Failed to generate title suggestions via Gemini:", err);
+    }
+    // Fallback templates if query fails
+    return [
+      `모르면 평생 후회하는 '${seedKeyword}' 핵심 요약 가이드`,
+      `요즘 주목받는 '${seedKeyword}' 관련 실용적인 대처법`,
+      `초보자도 쉽게 따라하는 '${seedKeyword}' 단계별 꿀팁`,
+      `성공적인 '${seedKeyword}' 관리를 위한 필수 추천템`,
+      `바쁜 현대인을 위한 '${seedKeyword}' 효율적인 해결 방안`,
+    ];
   }
 }
 

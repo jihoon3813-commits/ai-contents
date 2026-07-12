@@ -1240,3 +1240,15 @@ export async function startAutoGeneration(projectId: string) {
     return { success: false, error: err.message || "콘텐츠 자동 생성 프로세스 중 예외가 발생했습니다." };
   }
 }
+
+export async function getAISuggestedTitles(seedKeyword: string) {
+  try {
+    await verifyWorkspaceMembership(["OWNER", "ADMIN", "EDITOR", "VIEWER"]);
+    const provider = await getAIProviderWithDbKey();
+    const suggestions = await provider.generateTitleSuggestions(seedKeyword);
+    return { success: true, suggestions };
+  } catch (err: any) {
+    console.error("getAISuggestedTitles error:", err);
+    return { success: false, error: err.message || "추천 주제 생성 실패" };
+  }
+}

@@ -4,7 +4,7 @@ import React, { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
 import { saveSimplifiedProject } from "@/lib/actions/project";
-import { startAutoGeneration } from "@/lib/actions/generation";
+import { startAutoGeneration, getAISuggestedTitles } from "@/lib/actions/generation";
 import {
   Sparkles,
   Search,
@@ -171,21 +171,20 @@ export default function SetupWizardClient({ project, platforms }: SetupWizardCli
     }
 
     setIsGeneratingAiSuggest(true);
-    // 모사 지연 시간 부여
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const seed = aiSeedKeyword.trim();
-    const templates = [
-      `모르면 평생 후회하는 '${seed}' 최신 트렌드와 꿀팁 TOP 5`,
-      `요즘 핫한 '${seed}' 직접 체험해본 솔직 장단점 비교`,
-      `초보자도 10분 만에 마스터하는 '${seed}' 완전 정복 가이드`,
-      `2026년 마케팅 시장을 뒤흔들 '${seed}' 파급효과와 전망`,
-      `바쁜 현대인을 위한 '${seed}' 가성비 고르는 핵심 포인트`,
-    ];
-
-    setAiSuggestions(templates);
-    setIsGeneratingAiSuggest(false);
-    toast.success("AI 추천 타이틀 후보가 생성되었습니다.");
+    try {
+      const res = await getAISuggestedTitles(aiSeedKeyword.trim());
+      if (res.success && res.suggestions) {
+        setAiSuggestions(res.suggestions);
+        toast.success("AI 추천 타이틀 후보가 생성되었습니다.");
+      } else {
+        toast.error(res.error || "추천 주제 생성 중 오류가 발생했습니다.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("추천 주제 생성 중 실패했습니다.");
+    } finally {
+      setIsGeneratingAiSuggest(false);
+    }
   };
 
   // --- URL 분석 (크롤링 모사) ---
