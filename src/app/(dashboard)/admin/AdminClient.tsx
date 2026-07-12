@@ -20,9 +20,10 @@ import {
 } from "lucide-react";
 
 interface Profile {
-  id: string;
+  _id: string;
+  userId: string;
   name: string;
-  avatar_url: string;
+  avatar_url?: string;
   timezone: string;
   language: string;
   is_admin: boolean;
@@ -30,7 +31,7 @@ interface Profile {
 }
 
 interface Workspace {
-  id: string;
+  _id: string;
   name: string;
   slug: string;
   plan_code: string;
@@ -38,7 +39,7 @@ interface Workspace {
 }
 
 interface ErrorLog {
-  id: string;
+  _id: string;
   workspace_id: string | null;
   user_id: string | null;
   feature: string;
@@ -50,7 +51,7 @@ interface ErrorLog {
 }
 
 interface PromptTemplate {
-  id: string;
+  _id: string;
   code: string;
   title: string;
   template_text: string;
@@ -95,12 +96,16 @@ export default function AdminClient({ initialData }: AdminClientProps) {
     setIsProcessing(true);
     const targetVal = !currentVal;
     try {
-      await toggleAdminStatus(userId, targetVal);
+      const res = await toggleAdminStatus(userId, targetVal);
+      if (res && !res.success) {
+        toast.error(res.error || "작업을 완료할 수 없습니다.");
+        return;
+      }
       toast.success(`관리자 권한이 성공적으로 ${targetVal ? "부여" : "회수"}되었습니다.`);
       // 로컬 스태이트 업데이트
       setData((prev) => ({
         ...prev,
-        profiles: prev.profiles.map((p) => (p.id === userId ? { ...p, is_admin: targetVal } : p)),
+        profiles: prev.profiles.map((p) => (p.userId === userId ? { ...p, is_admin: targetVal } : p)),
       }));
     } catch (err: any) {
       toast.error(err.message || "작업을 완료할 수 없습니다.");
@@ -113,11 +118,15 @@ export default function AdminClient({ initialData }: AdminClientProps) {
   const handlePlanChange = async (workspaceId: string, planCode: string) => {
     setIsProcessing(true);
     try {
-      await updateWorkspacePlan(workspaceId, planCode);
+      const res = await updateWorkspacePlan(workspaceId, planCode);
+      if (res && !res.success) {
+        toast.error(res.error || "구독 수정에 실패했습니다.");
+        return;
+      }
       toast.success(`워크스페이스 구독 등급이 [${planCode}]로 설정되었습니다.`);
       setData((prev) => ({
         ...prev,
-        workspaces: prev.workspaces.map((w) => (w.id === workspaceId ? { ...w, plan_code: planCode } : w)),
+        workspaces: prev.workspaces.map((w) => (w._id === workspaceId ? { ...w, plan_code: planCode } : w)),
       }));
     } catch (err: any) {
       toast.error(err.message || "구독 수정에 실패했습니다.");
@@ -130,12 +139,16 @@ export default function AdminClient({ initialData }: AdminClientProps) {
   const handleResolveError = async (logId: string) => {
     setIsProcessing(true);
     try {
-      await resolveErrorLog(logId);
+      const res = await resolveErrorLog(logId);
+      if (res && !res.success) {
+        toast.error(res.error || "장애 해소 처리에 실패했습니다.");
+        return;
+      }
       toast.success("해당 시스템 장애 상태가 해결 완료로 조치되었습니다.");
       setData((prev) => ({
         ...prev,
         errorLogs: prev.errorLogs.map((e) =>
-          e.id === logId ? { ...e, resolved: true, resolved_at: new Date().toISOString() } : e
+          e._id === logId ? { ...e, resolved: true, resolved_at: new Date().toISOString() } : e
         ),
       }));
     } catch (err: any) {
@@ -256,13 +269,13 @@ export default function AdminClient({ initialData }: AdminClientProps) {
                 </thead>
                 <tbody>
                   {data.profiles.map((p) => (
-                    <tr key={p.id} className="border-b border-zinc-100 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-350">
+                    <tr key={p.userId} className="border-b border-zinc-100 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-350">
                       <td className="py-3 font-bold">{p.name}</td>
-                      <td className="py-3 font-mono text-[10px] text-zinc-400">{p.id}</td>
+                      <td className="py-3 font-mono text-[10px] text-zinc-400">{p.userId}</td>
                       <td className="py-3">{p.timezone}</td>
                       <td className="py-3 text-center">
                         <button
-                          onClick={() => handleToggleAdmin(p.id, p.is_admin)}
+                          onClick={() => handleToggleAdmin(p.userId, p.is_admin)}
                           className={`px-2 py-1 rounded text-[10px] font-black transition cursor-pointer ${
                             p.is_admin
                               ? "bg-purple-600/10 text-purple-600 border border-purple-500/25"
@@ -299,13 +312,13 @@ export default function AdminClient({ initialData }: AdminClientProps) {
                 </thead>
                 <tbody>
                   {data.workspaces.map((w) => (
-                    <tr key={w.id} className="border-b border-zinc-100 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-350">
+                    <tr key={w._id} className="border-b border-zinc-100 dark:border-zinc-800/60 text-zinc-700 dark:text-zinc-350">
                       <td className="py-3 font-bold">{w.name}</td>
                       <td className="py-3 font-mono text-[10px] text-zinc-400">{w.slug}</td>
                       <td className="py-3">
                         <select
                           value={w.plan_code}
-                          onChange={(e) => handlePlanChange(w.id, e.target.value)}
+                          onChange={(e) => handlePlanChange(w._id, e.target.value)}
                           className="px-2 py-1 text-xs rounded border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary"
                         >
                           <option value="FREE">FREE 플랜</option>
@@ -333,7 +346,7 @@ export default function AdminClient({ initialData }: AdminClientProps) {
               <div className="space-y-3">
                 {data.errorLogs.map((log) => (
                   <div
-                    key={log.id}
+                    key={log._id}
                     className="p-4 rounded-xl border border-zinc-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-950/20 space-y-2 flex flex-col justify-between md:flex-row md:items-start"
                   >
                     <div className="space-y-1 md:max-w-2xl">
@@ -375,7 +388,7 @@ export default function AdminClient({ initialData }: AdminClientProps) {
 
                     {!log.resolved && (
                       <button
-                        onClick={() => handleResolveError(log.id)}
+                        onClick={() => handleResolveError(log._id)}
                         className="mt-3 md:mt-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-550 text-white font-black text-[10.5px] rounded-lg shadow-sm cursor-pointer"
                       >
                         조치 처리 완료
@@ -394,7 +407,7 @@ export default function AdminClient({ initialData }: AdminClientProps) {
             <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">프롬프트 템플릿 현황 조회</h3>
             <div className="space-y-6">
               {data.promptTemplates.map((pt) => (
-                <div key={pt.id} className="space-y-1.5">
+                <div key={pt._id} className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-xs text-purple-600 dark:text-purple-400">
                       [{pt.code}]
