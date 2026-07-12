@@ -23,7 +23,7 @@ export default async function NewProjectPage() {
   }
 
   // 2. 기본 브랜드 선택 (없다면 첫 번째 브랜드 활용)
-  const defaultBrand = brands.find((b) => b.is_default === true) || brands[0];
+  const defaultBrand = brands.find((b: any) => b.is_default === true) || brands[0];
 
   // 3. 신규 빈 프로젝트 세션 발급
   let newProject;

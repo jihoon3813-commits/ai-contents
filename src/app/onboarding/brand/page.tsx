@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { brandSchema, type BrandInput } from "@/lib/schemas/brand";
-import { createBrand } from "@/lib/actions/brand";
 import { useToast } from "@/components/ui/toast";
 import { Loader2, ArrowRight, ArrowLeft, Target, Briefcase, Sparkles } from "lucide-react";
 
@@ -16,7 +16,7 @@ export default function OnboardingBrandPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const toast = useToast();
-  const supabase = createClient();
+  const completeOnboarding = useMutation(api.profiles.completeOnboarding);
 
   const goalOptions = [
     { id: "SEARCH_TRAFFIC", name: "검색 유입 극대화", desc: "검색엔진 SEO 점수 기반 상위 노출용 글 제작" },
@@ -60,45 +60,18 @@ export default function OnboardingBrandPage() {
     const loadingId = toast.loading("온보딩 설정을 완료하고 있습니다...");
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) throw new Error("인증 세션을 찾을 수 없습니다.");
-
-      // 1. 브랜드 등록을 선택한 경우 브랜드 생성 실행
-      if (brandData) {
-        await createBrand(brandData);
-      }
-
-      // 2. 프로필의 onboarding_completed = true 로 업데이트 및 목적(settings) 저장
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          onboarding_completed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
-      // 3. 워크스페이스 settings에 목표 goals 설정 백그라운드 반영 시도
-      const { data: member } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (member?.workspace_id) {
-        await supabase
-          .from("workspaces")
-          .update({
-            settings: { onboarding_goals: goals },
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", member.workspace_id);
-      }
+      // Convex mutation 호출
+      await completeOnboarding({
+        goals,
+        brandData: brandData
+          ? {
+              name: brandData.name,
+              industry: brandData.industry || undefined,
+              description: brandData.description || undefined,
+              target_audience: brandData.target_audience || undefined,
+            }
+          : undefined,
+      });
 
       toast.dismiss(loadingId);
       toast.success("온보딩이 완료되었습니다. 대시보드로 이동합니다!");
@@ -106,7 +79,7 @@ export default function OnboardingBrandPage() {
       router.refresh();
     } catch (err: any) {
       toast.dismiss(loadingId);
-      toast.error(`온보딩 완료 실패: ${err.message}`);
+      toast.error(`온보딩 완료 실패: ${err.message || "알 수 없는 오류"}`);
       setIsLoading(false);
     }
   };

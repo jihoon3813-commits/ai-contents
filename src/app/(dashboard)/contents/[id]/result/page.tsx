@@ -45,7 +45,7 @@ export default async function ResultPage({ params }: ResultPageProps) {
 
   // 3. 각 플랫폼별 섹션 로드
   const contentsWithSections = await Promise.all(
-    parsedContents.map(async (c) => {
+    parsedContents.map(async (c: any) => {
       const { data: secs } = await supabase
         .from("content_sections")
         .select("*")

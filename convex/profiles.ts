@@ -176,3 +176,91 @@ export const toggleAdmin = mutation({
     return { success: true };
   },
 });
+
+// 6. 온보딩 완료 처리 및 기본 브랜드 생성
+export const completeOnboarding = mutation({
+  args: {
+    goals: v.array(v.string()),
+    brandData: v.optional(
+      v.object({
+        name: v.string(),
+        industry: v.optional(v.string()),
+        description: v.optional(v.string()),
+        target_audience: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("인증되지 않은 사용자입니다.");
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!profile) {
+      throw new Error("프로필이 존재하지 않습니다.");
+    }
+
+    await ctx.db.patch(profile._id, {
+      onboarding_completed: true,
+      updated_at: new Date().toISOString(),
+    });
+
+    const member = await ctx.db
+      .query("workspace_members")
+      .withIndex("by_user_id", (q) => q.eq("user_id", userId))
+      .first();
+
+    if (member) {
+      const workspace = await ctx.db.get(member.workspace_id);
+      if (workspace) {
+        await ctx.db.patch(workspace._id, {
+          settings: { ...workspace.settings, onboarding_goals: args.goals },
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      if (args.brandData) {
+        const activeBrands = await ctx.db
+          .query("brands")
+          .withIndex("by_workspace_active", (q) =>
+            q.eq("workspace_id", member.workspace_id).eq("deleted_at", undefined)
+          )
+          .collect();
+
+        for (const b of activeBrands) {
+          if (b.is_default) {
+            await ctx.db.patch(b._id, { is_default: false });
+          }
+        }
+
+        const brandId = await ctx.db.insert("brands", {
+          workspace_id: member.workspace_id,
+          name: args.brandData.name,
+          industry: args.brandData.industry,
+          description: args.brandData.description,
+          target_audience: args.brandData.target_audience,
+          is_default: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+        await ctx.db.insert("brand_voice_profiles", {
+          brand_id: brandId,
+          style_description: "",
+          tones: [],
+          rules: [],
+          prohibited_words: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    return { success: true };
+  },
+});
